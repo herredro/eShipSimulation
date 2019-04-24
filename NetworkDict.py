@@ -1,4 +1,6 @@
-class Vertex:
+from tabulate import tabulate
+
+class Station:
     def __init__(self, id):
         self.id = id
         self.adjacent = {}
@@ -10,6 +12,12 @@ class Vertex:
     def get_connections(self):
         return self.adjacent
 
+    def isConnectedTo(self, station):
+        id = station.get_id()
+        if id in self.adjacent:
+            return True
+        else: return False
+
     def get_next_stop(self):
         return self.adjacent.values()
 
@@ -20,7 +28,12 @@ class Vertex:
         return int(self.adjacent[neighbor.get_id()])
 
     def get_distance(self, neighbor):
-        return int(self.adjacent[neighbor.get_id()])
+        #ToDo Figure out how to avoid non-existing path
+        try:
+            distance = int(self.adjacent[neighbor.get_id()])
+        except Exception:
+            print()
+        return distance
 
     def get_dist_fromID(self, neighborID):
         return int(self.adjacent[neighborID])
@@ -34,10 +47,13 @@ class Vertex:
     def get_visitors(self):
         return self.visitor
 
+    # def __str__(self):
+    #     return 'Station' + str(self.id) + ' has route to: ' \
+    #            + str([x.id for x in self.adjacent]) + ' with distance ' \
+    #            + str([self.get_weight(x) for x in self.adjacent])
+
     def __str__(self):
-        return 'Station' + str(self.id) + ' has route to: ' \
-               + str([x.id for x in self.adjacent]) + ' with distance ' \
-               + str([self.get_weight(x) for x in self.adjacent])
+        return str(self.id)
 
     def __repr__(self):
         return "Station " + str(self.id)
@@ -45,30 +61,39 @@ class Vertex:
 
 class Graph:
     def __init__(self):
-        self.stop_dict = {}
-        self.num_vertices = 0
+        self.stops = {}
+        self.chargers = {}
+        self.num_stations = 0
+        self.num_chargers = 0
 
     def __iter__(self):
-        return iter(self.stop_dict.values())
+        return iter(self.stops.values())
 
     def add_edge(self, frm, to, cost = 0):
-        if frm not in self.stop_dict:
-            self.add_stop(frm)
-        if to not in self.stop_dict:
-            self.add_stop(to)
+        if frm not in self.stops:
+            self.addstation(frm)
+        if to not in self.stops:
+            self.addstation(to)
 
-        self.stop_dict[frm].add_neighbor(to, cost)
+        self.stops[frm].add_neighbor(to, cost)
         #self.vert_dict[to].add_neighbor(self.vert_dict[frm], cost)
 
-    def add_stop(self, node):
-        self.num_vertices = self.num_vertices + 1
-        new_vertex = Vertex(node)
-        self.stop_dict[node] = new_vertex
+    def addstation(self, node):
+        self.num_stations = self.num_stations + 1
+        new_vertex = Station(node)
+        self.stops[node] = new_vertex
         return new_vertex
 
+    def addcharger(self, node, atStation):
+        # Charger is not a vertex
+        #self.num_vertices = self.num_vertices + 1
+        new_charger = Charger(node, atStation)
+        self.stops[node] = new_charger
+        return new_charger
+
     def get_if_stop(self, n):
-        if n in self.stop_dict:
-            return self.stop_dict[n]
+        if n in self.stops:
+            return self.stops[n]
         else:
             print("ERROR NEW LOCATION NOT EXISTING")
             return None
@@ -80,63 +105,102 @@ class Graph:
         return closest_stop
 
     def get_stop_dict(self):
-        return self.stop_dict
+        return self.stops
 
     def get_stop_object(self):
-        return self.stop_dict.values()
+        return self.stops.values()
 
-    def get_mat(self):
+    def get_mat_old(self):
         mat = []
-        for x in self.stop_dict.values():
+        for x in self.stops.values():
             mat.append(x.get_visitors())
         return mat
 
-    def print_mat(self):
+    def get_mat(self):
+        mat = ""
+        for x in self.stops.values():
+            visitors = x.get_visitors()
+            if type(x) is Charger:
+                mat += "%s:[*" % (x)
+                for y in visitors:
+                    mat += "%s " % (y)
+                mat += "]\t"
+            elif type(x) is Station:
+                mat += "%s:[" % (x)
+                for y in visitors:
+                    mat += "%s" % (y)
+                mat += "]\t"
+        return(mat)
+
+    def print_mat_old(self):
         mat = []
-        for x in self.stop_dict.values():
+        for x in self.stops.values():
             mat.append(x.get_visitors())
         print(mat)
 
+    def print_mat(self):
+        mat = ""
+        for x in self.stops.values():
+            visitors = x.get_visitors()
+            if type(x) is Charger:
+                mat += "%s[*" % (x)
+                for y in visitors:
+                    mat += "%s" % (y)
+                mat += "]\t"
+            elif type(x) is Station:
+                mat += "%s[" % (x)
+                for y in visitors:
+                    mat += "%s" % (y)
+                mat += "]\t"
+        print(mat)
+
     def get_network(self):
-        print("\t...Printing Network")
         for v in self.get_stop_object():
             for w in v.get_connections():
                 vid = v.get_id()
                 wid = w
                 print('\t\t%s,%s,%3d' % (vid, wid, v.get_dist_fromID(w)))
 
+
     def get_distance(self, a, b):
         return a.get_dist_fromID(b)
 
-class Controller_Map:
-    def __init__(self):
-        print("--STARTING MAP CONTROLLER--")
-        self.map = Graph()
 
-    def basic_map(self):
-        self.createBasic4Split()
-        self.map.get_network()
+class Charger(Station):
 
-    def get_map(self):
-        return self.map
+    def __init__(self, id, atStation):
+        # Necessary Vertex inits
+        super().__init__(id)
+        self.add_neighbor(atStation, 1)
+        # Charger inits
+        self.fromStation = atStation
+        self.occupiedBy = None
+        self.energyConsumed = 0
 
-    def createBasic3(self):
-        self.map.add_stop(1)
-        self.map.add_stop(2)
-        self.map.add_stop(3)
+    def charge(self, boat):
+        if (self.occupiedBy == None): print("ERROR CHARGER: Cannot charge when no boat docked")
+        if (self.occupiedBy == boat):
+            while (self.occupiedBy.get_battery() < 100):
+                self.occupiedBy.charge(1)
+            print("Boat %s fully charged" % (str(boat.get_id())))
+        else:
+            print("ERROR CHARGER: Charger already occupied")
 
-        self.map.add_edge(1, 2, 10)
-        self.map.add_edge(2, 3, 20)
-        self.map.add_edge(3, 1, 50)
+    def dock(self, boat, charger):
+        charger.occupiedBy = boat
+        charger.occupiedBy.set_location(charger)
 
-    def createBasic4Split(self):
-        self.map.add_stop(1)
-        self.map.add_stop(2)
-        self.map.add_stop(3)
-        self.map.add_stop(4)
+    def undock(self, charger):
+        if charger.occupiedBy is None:
+            print("ERROR CHARGER: Dock undocking: Dock already Empty")
+        else:
+            charger.occupiedBy.set_location = charger.fromStation
+            charger.occupiedBy = None
 
-        self.map.add_edge(1, 2, 10)
-        self.map.add_edge(1, 4, 5)
-        self.map.add_edge(4, 2, 10)
-        self.map.add_edge(2, 3, 20)
-        self.map.add_edge(3, 1, 50)
+    def charge(self, boat, charger):
+        self.dock(boat, charger)
+        charger.charge(boat)
+        self.undock(charger)
+
+    def getstation(self):
+        return self.fromStation
