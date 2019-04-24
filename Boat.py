@@ -1,90 +1,82 @@
+import NetworkDict
+
 class Controller_Boat:
     def __init__(self, map):
-        print("STARTING BOAT CONTROLLER")
+        print("--STARTING BOAT CONTROLLER--")
         self.map = map
         self.numBoats = 0
         self.boats = []
 
     def run(self):
-        self.start_basic_boat(2)
-        self.boat_moves(0,3)
+        self.create_basic_boats(2)
+        self.map.print_mat()
+        self.move_multiple__closest(self.boats[0], 7)
 
-    def start_basic_boat(self, num):
+    def create_basic_boats(self, num):
         numBoats2create = num
-        for i in range(1, numBoats2create+1):
-            boat = Boat(name=i, map=self.map, location=self.map.get_if_stop(1))
+        for i in range(0, numBoats2create):
+            boat = Boat(id=i, location=self.map.get_if_stop(1))
             self.boats.append(boat)
             self.map.get_if_stop(1).add_visitor(boat)
             self.numBoats = self.numBoats + 1
 
-    def boat_moves(self, boat, num):
+    def move_multiple__closest(self, boat, num):
         for i in range (0,num):
-            self.boats[boat].drive_next_closest()
+            to = self.map.get_closest_stop(boat.get_location())
+            self.drive(self.boats[boat.get_id()], to)
 
-
-class Boat:
-    def __init__(self, name, map, location, battery = 100, charging_speed = 1, consumption = 1):
-        self.name = name
-        self.charging_speed = charging_speed
-        self.battery= battery
-        self.consumption = consumption
-        self.map = map
-        self.location = location
-        print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.name, self.battery, self.charging_speed, self.consumption))
-
-    def drivable(self, distance):
-        if (self.battery - (distance * self.consumption)) > 0: return True
+    def drivable__battery(self, boat, distance):
+        if (boat.get_battery() - (distance * boat.get_consumption())) > 0: return True
         else: return False
 
-    def drive_next_closest(self):
+    def drive(self, boat, stop):
         print(".BOAT DRIVING ALONE...")
-        old_loc = self.location.get_id()
-        old_loc_obj = self.location
-        new_loc = self.closestStop_tuple()
-        new_loc_obj = self.closestStop_object()
-        bat = self.battery
-        if self.drivable(new_loc[1]):
-            self.move(new_loc)
+        old_loc = boat.get_location()
+        new_loc = stop
+        distance = old_loc.get_distance(new_loc)
+        bat = boat.get_battery()
+        if self.drivable__battery(boat, distance):
+            #move
+            boat.get_location().remove_visitor(boat)
+            #self.map.get_if_stop(stop).add_visitor(boat)
+            new_loc.add_visitor(boat)
+            boat.set_location(new_loc)
+            boat.discharge(distance)
+
             print("...moved Boat %s from \n\t\torigin=%s to destination=%s\n\t\tDist: %s, Bat: %s-%s"
-                  % (str(self),
-                     old_loc_obj.get_id(),
-                     new_loc_obj.get_id(),
-                     new_loc[1],
-                     bat, self.battery))
+                  % (str(boat),
+                     old_loc.get_id(),
+                     new_loc.get_id(),
+                     distance,
+                     bat, boat.get_battery()))
             print(self.map.get_mat())
         else:
             print("Cannot drive to any more station. Battery capacity too low.")
 
-    def move(self, nextStop):
-        self.location.remove_visitor(self)
-        self.map.get_if_stop(nextStop[0]).add_visitor(self)
-        self.location = self.map.get_if_stop(nextStop[0])
-        self.battery = self.battery - (nextStop[1] * self.consumption)
-
-    def closestStop_tuple(self):
-        options = self.location.get_connections()
-        options_sorted = sorted(options.items(), key=lambda x: x[1])
-
-        return options_sorted[0]
-
-    def closestStop_object(self):
-        options = self.location.get_connections()
-        closest_tuple = sorted(options.items(), key=lambda x: x[1])
-        closest_object = self.map.get_if_stop(closest_tuple[0][0])
-        return closest_object
 
 
-    def setLocation(self, loc):
+class Boat:
+    def __init__(self, id, location, battery = 100, charging_speed = 1, consumption = 1):
+        self.id = id
+        self.charging_speed = charging_speed
+        self.battery= battery
+        self.consumption = consumption
+        #self.map = map
+        self.location = location
+        print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
+
+
+    def set_location(self, loc):
         self.location = loc
 
-    def getLocation(self):
+    def get_location(self):
         return self.location
 
-    def getBattery(self):
+    def get_battery(self):
         return self.battery
 
-    def getBatteryPrint(self):
-        print("\t...BATTERY Boat %s: %d%%" %(self.name, self.battery))
+    def get_battery__print(self):
+        print("\t...BATTERY Boat %s: %d%%" % (self.id, self.battery))
 
     def charge(self, time):
         if (self.battery + (time * self.charging_speed)) > 100:
@@ -95,23 +87,23 @@ class Boat:
             return self.battery
 
     def discharge(self, minus):
-        self.battery = self.battery - minus
+        self.battery = self.battery - (minus * self.consumption)
 
-    def getConsumption(self):
+    def get_consumption(self):
         return self.consumption
 
-    def getName(self):
-        return self.name
+    def get_id(self):
+        return self.id
 
-    def getChargingSpeed(self):
+    def get_charging_speed(self):
         return self.charging_speed
 
     def toString(self):
         return print("\t...This is Boat %s with \n\t\tbattery=%s, charging_speed=%s, consumption=%s\n" % (
-        self.name, self.battery, self.charging_speed, self.consumption))
+            self.id, self.battery, self.charging_speed, self.consumption))
 
     def __str__(self):
-        return str(self.name)
+        return str(self.id)
 
     def __repr__(self):
-        return str(self.name)
+        return str(self.id)
