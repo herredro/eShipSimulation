@@ -1,52 +1,68 @@
-import NetworkDict as Net
+import Network as Net
 import Boat as Bo
 import Strategies
 import Global as G
 from tabulate import tabulate
 
+# Controller for Map and Boats. While Map and Boat classes provide basic functionality,
+# the controller takes care of decisions and actions such as creation and movements
+
 class Map:
+    # Map controller has an instance of map
     def __init__(self):
-        if G.debug: print("--STARTING MAP CONTROLLER--")
         self.map = Net.Graph()
-        self.chargers = {}
+        #self.chargers = {}
 
-    def get_map(self):
-        return self.map
+    # 3 stations (1 loop), 1 charger
+    # def createBasic3(self):
+    #     self.map.addstation(1)
+    #     self.map.addstation(2)
+    #     self.map.addstation(3)
+    #     self.map.addcharger(9)
+    #
+    #     self.map.add_edge(1, 2, 10)
+    #     self.map.add_edge(2, 3, 20)
+    #     self.map.add_edge(3, 1, 50)
+    #
+    # # 4 stations (2 loops), 1 charger
+    # def createBasic4Split(self):
+    #     self.map.addstation(1)
+    #     self.map.addstation(2)
+    #     self.map.addstation(3)
+    #     self.map.addstation(4)
+    #     self.map.addcharger(9)
+    #
+    #     self.map.add_edge(1, 2, 10)
+    #     self.map.add_edge(1, 4, 5)
+    #     self.map.add_edge(4, 2, 10)
+    #     self.map.add_edge(2, 3, 20)
+    #     self.map.add_edge(3, 1, 50)
+    #     self.map.add_edge(1, 9, 20)
+    #     self.map.add_edge(9, 1, 20)
 
-    def createBasic3(self):
-        self.map.addstation(1)
-        self.map.addstation(2)
-        self.map.addstation(3)
-        self.map.addcharger(9, 1)
+    def create_inital_map(self, edgeList=G.edgeList):
+        for i in edgeList:
+            try:
+                if i[3] == 1:
+                    # Todo: if charger was vertex, it looses existing edges when transformed to charger
+                    self.map.addcharger(i[0])
+            except IndexError:
+                pass
+            self.map.add_edge(i[0], i[1], i[2])
+        # Todo Stations are sorted by edge-creation, not by actual station number
+        self.printedges_tabulate()
 
-        self.map.add_edge(1, 2, 10)
-        self.map.add_edge(2, 3, 20)
-        self.map.add_edge(3, 1, 50)
 
-    def createBasic4Split(self):
-        self.map.addstation(1)
-        self.map.addstation(2)
-        self.map.addstation(3)
-        self.map.addstation(4)
-        self.map.addcharger(9,1)
-
-        self.map.add_edge(1, 2, 10)
-        self.map.add_edge(1, 4, 5)
-        self.map.add_edge(4, 2, 10)
-        self.map.add_edge(2, 3, 20)
-        self.map.add_edge(3, 1, 50)
-        self.map.add_edge(1, 9, 20)
-        self.map.add_edge(9, 1, 20)
-
+    # Printing all edges visually
     def printedges_tabulate(self):
         tabs = []
-        vid = None
-        wid = None
-        dis = None
-        for v in self.map.get_stop_object():
+        # vid = None
+        # wid = None
+        # dis = None
+        for v in self.map.get_all_stations():
             for w in v.get_connections():
-                vid = v.get_id()
-                wid = w
+                vid = "S" + str(v.get_id())
+                wid = "S" + str(w)
                 dis = v.get_dist_fromID(w)
                 tabs.append([vid, wid, dis])
         #print("---------EDGES----------")
@@ -55,75 +71,40 @@ class Map:
         #print("------------------------\n")
 
 class Boats:
+    # Boat Controller has map, number of boats, boats themselves as dictionary
     def __init__(self, map):
-        if G.debug: print("--STARTING BOAT CONTROLLER--")
         self.map = map
         self.numBoats = 0
         self.boats = {}
-        self.move_strategist = Strategies.NextStop(self.map)
+        # ToDo decide: static or instance?
+        self.move_strategy = Strategies.Algorithms(self.map)
 
-    def printstate__tabulate_OLD(self):
-        state = self.map.get_mat()
-        print("\t...Printing State\n\t" + "    " + state)
-
-    def printstate_extended(self):
-        print("STATIONS:")
-        print(self.map.get_mat())
-        print()
-
-    def printboats_tabulate(self):
-        # [[1,2,10], [1,4,5]]
-        tabs = []
-        # id = None
-        # bat = None
-        # chs = None
-        # con = None
-        for b in self.boats.values():
-            id = b.get_id()
-            loc = b.get_location().get_id()
-            bat = b.get_battery()
-            chs = b.get_charging_speed()
-            con = b.get_consumption()
-            tabs.append([id, loc, bat, chs, con])
-        #print("---------------------BOATS---------------------")
-        print("BOATS:")
-        print(tabulate(tabs, headers=['ID', 'Location', 'Battery', 'Ch.Spd.', 'Cons.'], tablefmt="fancy_grid"))
-        #print("-----------------------------------------------\n")
-
+    # Creates a Boat and adds to boat dict.
     def new_boat(self, id, loc=-1, bat=100, chsp=1, cons=1):
+        # default location -1 means to position boat at start-vertex
         if loc == -1:
-            loc = self.map.get_if_stop(1)
+            loc = self.map.get_station_object(G.startVertex)
         boat = Bo.Boat(id, loc, bat, chsp, cons)
         self.boats[id] = boat
+        # location needs to know it has new visitor
         loc.add_visitor(boat)
         self.numBoats += 1
 
-    def create_basic_boats(self, numBoats2create):
+    # Method to create several basic boats at once
+    def create_basic_boats(self, numBoats2create=G.numBoats):
         for i in range(self.numBoats+1, self.numBoats+numBoats2create+1):
-            boat = Bo.Boat(id=(str(i)), location=self.map.get_if_stop(1))
+            boat = Bo.Boat(id=(str(i)), location=self.map.get_station_object(1))
             self.boats[i] = boat
-            self.map.get_if_stop(1).add_visitor(boat)
+            self.map.get_station_object(1).add_visitor(boat)
             self.numBoats = self.numBoats + 1
 
-    def create_basic_boats2(self, numBoats2create):
-        for i in range(self.numBoats, self.numBoats+numBoats2create):
-            self.new_boat(id=("B"+str(i)))
-            # boat = Bo.Boat(id=("B"+str(i)), location=self.map.get_if_stop(1))
-            # self.boats[i] = boat
-            # self.map.get_if_stop(1).add_visitor(boat)
-            # self.numBoats = self.numBoats + 1
-
-    def move_multiple__closest(self, boat, num):
-        for i in range (0,num):
-            to = self.map.get_closest_stop(boat.get_location())
-            self.drive(self.boats[1], to)
-
-    def move__inputboat(self):
-        #ToDo print possible boats without dict_values()
-        print("Which Boat to move (x to cancel)? Possible boats are: %s" %
-              (
-                  self.boats.values()
-              ))
+    # Method (loop) that asks user which boat to move
+    def move_boat__input(self):
+        self.printmapstate()
+        self.printboatlist()
+        print("Which Boat to move (x to cancel)? Possible boats are: ", end='')
+        for boat in self.boats.keys():
+            print(boat, sep='', end=', ', flush=True)
         choice = input("Enter Boatnumber: ")
         if choice == "x":
             print("CANCELED\n")
@@ -131,46 +112,63 @@ class Boats:
             try:
                 choice = int(choice)
                 boat = self.boats[choice]
-                self.move__input(boat)
+                self.move_station__input(boat)
             except Exception:
                 print("ERROR: wrong input\n")
-                self.move__inputboat()
+                self.move_boat__input()
 
-    def move__input(self, boat):
-        print("--------------MAP STATE--------------")
-        self.printstate_extended()
-        print("-------------------------------------")
-        print("Enter next station for Boat%s at Station%s. Adjacent stations are: " %(boat.get_id(), boat.get_location().get_id()) + str(boat.get_location().get_connections()))
+    # Method (loop) that asks user where to move to or charge a given boat
+    def move_station__input(self, boat):
+        print("\n\n\n\n")
+        self.printboatlist()
+        self.printmapstate()
+        print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: " %(boat.get_id(), boat.get_battery(), boat.get_location().get_id()) + str(boat.get_location().get_connections()) + ", {station: distance}")
 
-        choice = input("Enter Strategy:\n1-9 = Station X\nc\t= closest (algorithm)\nx\t= cancel. Your input: ")
+        choice = input("Enter Strategy:\n1-9 = Station X\nc\t= closest (algorithm)\ne\t= charge\nx\t= cancel. Your input: ")
+        # Choice: Move to closest station.
         if choice == "c":
-            to = self.move_strategist.closest(boat)
+            to = Strategies.Algorithms.closest_neighbor(self.map, boat)
             self.drive(boat, to)
-            self.move__input(boat)
+            self.move_station__input(boat)
+        # Choice: Cancel.
         elif choice == "x":
             print("CANCELED\n")
-            self.move__inputboat()
+            self.move_boat__input()
+        # Choice: Charge.
+        elif choice == "e":
+            if type(boat.get_location()) == Net.Charger:
+                # Todo charge max
+                duration = input("How long should boat charge? (type 'max' for full charge)")
+                if duration == "max":
+                    boat.get_location().serve(boat, -1)
+                else:
+                    boat.get_location().serve(boat, int(duration))
+                self.move_station__input(boat)
+            else:
+                print("ERROR CHARGE: Boat not at charger")
+                self.move_station__input(boat)
+        # Choice: Move to specific Station.
         else:
+            # Check if user-specified location is in range (i.e. edge existing)
             try:
                 choice_int = int(choice)
-                to = self.map.get_if_stop(choice_int)
+                to = self.map.get_station_object(choice_int)
                 self.drive(boat, to)
-                self.move__input(boat)
+                self.move_station__input(boat)
             except Exception:
                 print("ERROR: wrong input\n")
-                self.move__input(boat)
+                self.move_station__input(boat)
 
-    def drivable__battery(self, boat, distance):
-        if (boat.get_battery() - (distance * boat.get_consumption())) > 0: return True
-        else: return False
-
+    # Method to actually move a boat to a given station
     def drive(self, boat, stop):
-        if G.debug: print(".BOAT DRIVING ALONE...")
         old_loc = boat.get_location()
         new_loc = stop
+        # check if edge to new_loc is existing
+        # Todo Implement: Path should exist even though there is no direct edge
         if old_loc.isConnectedTo(new_loc):
             distance = old_loc.get_distance(new_loc)
             bat = boat.get_battery()
+            # Check if battery sufficient. If yes: move.
             if self.drivable__battery(boat, distance):
                 #move
                 boat.get_location().remove_visitor(boat)
@@ -182,3 +180,28 @@ class Boats:
             else:
                 print("Cannot drive to any more station. Battery capacity too low.")
         else: print("There is no path to this Station")
+
+    # Method to check if distance is doable with battery load
+    def drivable__battery(self, boat, distance):
+        if (boat.get_battery() - (distance * boat.get_consumption())) > 0: return True
+        else: return False
+
+    # Prints map state (i.e. which boat is where)
+    def printmapstate(self):
+        print("STATIONS:")
+        #print(self.map.get_network_matrix())
+        check = self.map.get_network_tabulate()
+        print(tabulate(check, tablefmt="fancy_grid"))
+
+    # Prints list of boats including their specs
+    def printboatlist(self):
+        tabs = []
+        for b in self.boats.values():
+            id = b.get_id()
+            loc = b.get_location().get_id()
+            bat = str(b.get_battery()) + "%"
+            chs = b.get_charging_speed()
+            con = b.get_consumption()
+            tabs.append([id, loc, bat, chs, con])
+        print("BOATS:")
+        print(tabulate(tabs, headers=['ID', 'Location', 'Battery', 'Ch.Spd.', 'Cons.'], tablefmt="fancy_grid"))

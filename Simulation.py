@@ -1,29 +1,37 @@
 import Controller
 import Global as G
+from GUI import Window
+from tkinter import *
 
 class Simulation:
 
     def __init__(self):
-        print("BOAT SIMULATOR               ")
+        print("BOAT SIMULATOR")
         print("INITIAL SETTINGS:\n")
 
         # Controller Map
         self.cm = Controller.Map()
-        self.cm.createBasic4Split()
-        #self.cm.map.get_network_tabulate()
-        self.cm.printedges_tabulate()
+        # Initial Map can be modified in Global.py
+        self.cm.create_inital_map()
+
 
         # Controller Boats
         self.cb = Controller.Boats(self.cm.map)
-        self.cb.new_boat(1, bat=1000)
-        self.cb.create_basic_boats(4)
+        self.cb.create_basic_boats()
+        # manually add boat with: self.cb.new_boat(1, bat=1000)
 
-        self.cb.printboats_tabulate()
-        self.cb.printstate_extended()
+        #self.cb.printboatlist()
+        #self.cb.printmapstate()
 
-        # Run Simulation
+        #GUI
+        # self.gui = Tk()
+        # self.app = Window(self.gui)
+        # self.gui.mainloop()
+
+        # UI Simulation-loop
         #ToDo not bulletproof.
-        self.cb.move__inputboat()
+        self.cb.move_boat__input()
 
+# RUN THIS
 if __name__ == "__main__":
     sim = Simulation()
