@@ -2,7 +2,7 @@ from tabulate import tabulate
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 # Class for basic Station (i.e. not a charger)
-class Vertex:
+class Station:
     # Station knows its adjacent stations and boats that are present
     def __init__(self, id):
         self.id = id
@@ -64,7 +64,7 @@ class Vertex:
     #            + str([x.id for x in self.adjacent]) + ' with distance ' \
     #            + str([self.get_weight(x) for x in self.adjacent])
 
-class Charger(Vertex):
+class Charger(Station):
 
     # Charger is subclass of Vertex with additional charging functionality
     def __init__(self, id):
@@ -129,7 +129,7 @@ class Graph:
     #Todo Maybe: move to Controller?
     def addstation(self, node):
         self.num_stations = self.num_stations + 1
-        new_vertex = Vertex(node)
+        new_vertex = Station(node)
         self.stations[node] = new_vertex
         return new_vertex
 
@@ -161,7 +161,7 @@ class Graph:
                 for y in visitors:
                     mat += "%s " % (y)
                 mat += "]\t"
-            elif type(x) is Vertex:
+            elif type(x) is Station:
                 mat += "%s:[" % (x)
                 for y in visitors:
                     mat += "%s" % (y)

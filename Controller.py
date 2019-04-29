@@ -7,7 +7,7 @@ from tabulate import tabulate
 # Controller for Map and Boats. While Map and Boat classes provide basic functionality,
 # the controller takes care of decisions and actions such as creation and movements
 
-class Map:
+class Maps:
     # Map controller has an instance of map
     def __init__(self):
         self.map = Net.Graph()

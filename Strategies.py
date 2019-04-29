@@ -1,11 +1,3 @@
-class NextStop:
-
-    def __init__(self, map):
-        self.map = map
-
-    def closest(self, boat):
-        return self.map.closest_neighbor(boat.get_location())
-
 class Algorithms:
 
     def __init__(self, map):
