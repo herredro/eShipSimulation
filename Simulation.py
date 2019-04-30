@@ -28,6 +28,7 @@ class Simulation:
         # Simulation-loop
         #ToDo not bulletproof.
         boatscontroll.move_boat__input()
+        #boatscontroll.move_station_algorithm(boatscontroll.boats[1], mapscontroll.map.get_station_object(4), "d")
 
 # >>>>>>>>>>>>> RUN THIS <<<<<<<<<<<<<<
 if __name__ == "__main__":

@@ -13,33 +13,6 @@ class Maps:
         self.map = Net.Graph()
         #self.chargers = {}
 
-    # 3 stations (1 loop), 1 charger
-    # def createBasic3(self):
-    #     self.map.addstation(1)
-    #     self.map.addstation(2)
-    #     self.map.addstation(3)
-    #     self.map.addcharger(9)
-    #
-    #     self.map.add_edge(1, 2, 10)
-    #     self.map.add_edge(2, 3, 20)
-    #     self.map.add_edge(3, 1, 50)
-    #
-    # # 4 stations (2 loops), 1 charger
-    # def createBasic4Split(self):
-    #     self.map.addstation(1)
-    #     self.map.addstation(2)
-    #     self.map.addstation(3)
-    #     self.map.addstation(4)
-    #     self.map.addcharger(9)
-    #
-    #     self.map.add_edge(1, 2, 10)
-    #     self.map.add_edge(1, 4, 5)
-    #     self.map.add_edge(4, 2, 10)
-    #     self.map.add_edge(2, 3, 20)
-    #     self.map.add_edge(3, 1, 50)
-    #     self.map.add_edge(1, 9, 20)
-    #     self.map.add_edge(9, 1, 20)
-
     def create_inital_map(self, edgeList=G.edgeList):
         for i in edgeList:
             try:
@@ -51,7 +24,6 @@ class Maps:
             self.map.add_edge(i[0], i[1], i[2])
         # Todo Stations are sorted by edge-creation, not by actual station number
         self.printedges_tabulate()
-
 
     # Printing all edges visually
     def printedges_tabulate(self):
@@ -77,7 +49,7 @@ class Boats:
         self.numBoats = 0
         self.boats = {}
         # ToDo decide: static or instance?
-        self.move_strategy = Strategies.Algorithms(self.map)
+        self.move_strategy = Strategies.Strategies(self.map)
 
     # Creates a Boat and adds to boat dict.
     def new_boat(self, id, loc=-1, bat=100, chsp=1, cons=1):
@@ -117,6 +89,11 @@ class Boats:
                 print("ERROR: wrong input\n")
                 self.move_boat__input()
 
+    def move_station_algorithm(self, boat, destination, algo):
+        if algo=="d":
+            Strategies.Dijkstra.getPath(self.map, boat.get_location(), destination)
+
+
     # Method (loop) that asks user where to move to or charge a given boat
     def move_station__input(self, boat):
         print("\n\n\n\n")
@@ -127,7 +104,7 @@ class Boats:
         choice = input("Enter Strategy:\n1-9 = Station X\nc\t= closest (algorithm)\ne\t= charge\nx\t= cancel. Your input: ")
         # Choice: Move to closest station.
         if choice == "c":
-            to = Strategies.Algorithms.closest_neighbor(self.map, boat)
+            to = Strategies.Strategies.closest_neighbor(self.map, boat)
             self.drive(boat, to)
             self.move_station__input(boat)
         # Choice: Cancel.
