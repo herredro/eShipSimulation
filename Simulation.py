@@ -1,35 +1,51 @@
-import Controller
-import Global as G
-from GUI import Window
-from tkinter import *
+import simpy
+import Controller as Controller
+import Network as Map
 
 class Simulation:
-
     def __init__(self):
+        self.env = simpy.Environment()
+        #Todo Attach process?
+
         print("BOAT SIMULATOR")
         print("INITIAL SETTINGS:\n")
 
-        # Controller Map
-        mapscontroll = Controller.Maps()
+        self.map = Map.Graph(self.env)
         # Initial Map can be modified in Global.py
-        mapscontroll.create_inital_map()
+        self.map.create_inital_map()
+        self.map.get_station_object(1).add_demand(5)
+        self.map.get_station_object(2).add_demand(10)
+        self.map.get_station_object(3).add_demand(15)
+
+        print("Highest demand at:",self.map.get_highest_demand())
 
 
         # Controller Boats
-        boatscontroll = Controller.Boats(mapscontroll.map)
-        boatscontroll.create_basic_boats()
+        self.cb = Controller.Boats(self)
+        self.cb.new_boat(1, bat=100)
+        self.map.printmapstate()
+#        drive_proc = self.env.process(self.cb.drive(self.cb.boats[1], self.cm.map.get_station_object(2)))
+        self.map.printmapstate()
+        #cb.create_basic_boats()
         # manually add boat with: self.cb.new_boat(1, bat=1000)
 
-        #GUI
-        # gui = Tk()
-        # app = Window(self.gui)
-        # gui.mainloop()
-
         # Simulation-loop
-        #ToDo not bulletproof.
-        boatscontroll.move_boat__input()
-        #boatscontroll.move_station_algorithm(boatscontroll.boats[1], mapscontroll.map.get_station_object(4), "d")
+        self.cb.move_boat__input()
 
-# >>>>>>>>>>>>> RUN THIS <<<<<<<<<<<<<<
-if __name__ == "__main__":
-    sim = Simulation()
+
+    def run(self):
+        self.env.process(self.boat.drive(5))
+        #self.env.process(self.boat.charge(5))
+        self.env.process(self.boat.drive(5))
+
+        self.env.run(until=30)
+
+sim = Simulation()
+#sim.run()
+
+
+# env = simpy.Environment()
+# bt = simpyy.BoatSP.BoatSP(env)
+#
+# env.process(bt.drive(5))
+# env.run(20)

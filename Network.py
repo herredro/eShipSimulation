@@ -1,4 +1,5 @@
 from tabulate import tabulate
+import Global as G
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 # Class for basic Station (i.e. not a charger)
@@ -8,6 +9,11 @@ class Station:
         self.id = id
         self.adjacent = {}
         self.visitor = []
+        self.demand = 0
+
+
+    def add_demand(self, num):
+        self.demand = num
 
     # Method to add an adjacent station
     def add_neighbor(self, neighbor, weight=0):
@@ -58,7 +64,7 @@ class Station:
         return "Station " + str(self.id)
 
     def __str__(self):
-        return str(self.id)
+        return "Station " + str(self.id)
     # OLD:
     #     return 'Station' + str(self.id) + ' has route to: ' \
     #            + str([x.id for x in self.adjacent]) + ' with distance ' \
@@ -110,7 +116,8 @@ class Charger(Station):
 # Todo Comment
 class Graph:
     #Graph has list of stations (vertex pbject) and list of chargers (charger object)
-    def __init__(self):
+    def __init__(self, env):
+        self.env = env
         self.stations = {}
         self.chargers = {}
         self.num_stations = 0
@@ -182,20 +189,50 @@ class Graph:
         total.append(boats)
         return total
 
-
-
-        # for i in range (0, len(self.stations)):
-        #     station = self.stations.pop(1)
-        #     station = "Station %s" % (str(self.stations.popitem()[1]))
-        #     stationnames.append("Station %s" %(str(self.stations.popitem()[1])))
-        #     visitors = 1
-        # for x in self.stations.values():
-        #     pass
-        # stationnames.reverse()
-        # total.append(stationnames)
-        # total.append(boats)
-        # return total
-
-
     def get_distance(self, a, b):
         return a.get_dist_fromID(b)
+
+    def get_highest_demand(self):
+        firstkey = self.stations.get(0, +1)
+        highest_demand_station = self.stations.get(firstkey)
+        for station in self.get_all_stations():
+            if station.demand > highest_demand_station.demand:
+                highest_demand_station = station
+        return highest_demand_station
+
+    def printmapstate(self):
+        print("STATIONS:")
+        #print(self.map.get_network_matrix())
+        check = self.get_network_tabulate()
+        print(tabulate(check, tablefmt="fancy_grid"))
+
+
+
+    def create_inital_map(self, edgeList=G.edgeList):
+        for i in edgeList:
+            try:
+                if i[3] == 1:
+                    # Todo: if charger was vertex, it looses existing edges when transformed to charger
+                    self.addcharger(i[0])
+            except IndexError:
+                pass
+            self.add_edge(i[0], i[1], i[2])
+        # Todo Stations are sorted by edge-creation, not by actual station number
+        self.printedges_tabulate()
+
+    # Printing all edges visually
+    def printedges_tabulate(self):
+        tabs = []
+        # vid = None
+        # wid = None
+        # dis = None
+        for v in self.get_all_stations():
+            for w in v.get_connections():
+                vid = "S" + str(v.get_id())
+                wid = "S" + str(w)
+                dis = v.get_dist_fromID(w)
+                tabs.append([vid, wid, dis])
+        #print("---------EDGES----------")
+        print("EDGES:")
+        print(tabulate(tabs, headers=['From', 'To', 'Distance'], tablefmt="fancy_grid"))
+        #print("------------------------\n")
