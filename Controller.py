@@ -1,20 +1,11 @@
 import Network as Net
 import Boat as Boat
-import Strategies as Strategies
+from Algorithms import Strategies as Strategies
 import Global as G
 from tabulate import tabulate
 
 # Controller for Map and Boats. While Map and Boat classes provide basic functionality,
 # the controller takes care of decisions and actions such as creation and movements
-
-class Maps:
-    # Map controller has an instance of map
-    def __init__(self, env):
-        self.map = Net.Graph()
-        self.env = env
-        #self.chargers = {}
-
-
 
 class Boats:
     # Boat Controller has map, number of boats, boats themselves as dictionary
@@ -32,21 +23,38 @@ class Boats:
         # default location -1 means to position boat at start-vertex
         if loc == -1:
             loc = self.map.get_station_object(G.startVertex)
-        boat = Boat.Boat(self.sim, id, loc, bat, chsp, cons)
+        boat = Boat.Boat(self.sim, id, loc, battery=bat, charging_speed=chsp, consumption=cons)
         self.boats[id] = boat
         # location needs to know it has new visitor
         loc.add_visitor(boat)
         self.numBoats += 1
 
     # Method to create several basic boats at once
-    def create_basic_boats(self, numBoats2create=G.numBoats):
+    def create_basic_boats(self, numBoats2create=G.numBoats, bat= 100):
         for i in range(self.numBoats+1, self.numBoats+numBoats2create+1):
-            boat = Boat.Boat(id=(str(i)), location=self.map.get_station_object(1))
+            boat = Boat.Boat(self.sim, id=(str(i)), location=self.map.get_station_object(1), battery=bat)
             self.boats[i] = boat
             self.map.get_station_object(1).add_visitor(boat)
             self.numBoats = self.numBoats + 1
 
+    def fleet_move_demand(self, strategy, pu_quant, do_quant):
+        for boat in self.boats.values():
+            nextstation = strategy(self.map, boat)
+            boat.drive(nextstation)
+            boat.pickup(pu_quant)
+            boat.dropoff(do_quant)
+            self.map.update_demands()
+            self.map.printmapstate()
+
+    def fleet_move(self, strategy, pu_quant=None, do_quant=None):
+        for boat in self.boats.values():
+            nextstation = strategy(self.map, boat)
+            boat.drive(nextstation)
+            self.map.printmapstate()
+
+
     # Method (loop) that asks user which boat to move
+    #Todo Q: Uses demand?
     def move_boat__input(self):
         self.map.printmapstate()
         self.printboatlist()
@@ -65,11 +73,6 @@ class Boats:
                 print("ERROR: wrong input (choosing boat)\n")
                 self.move_boat__input()
 
-    def move_station_algorithm(self, boat, destination, algo):
-        if algo=="d":
-            Strategies.Dijkstra.getPath(self.map, boat.get_location(), destination)
-
-
     # Method (loop) that asks user where to move to or charge a given boat
     def move_station__input(self, boat):
         print("\n\n\n\n")
@@ -77,13 +80,32 @@ class Boats:
         self.map.printmapstate()
         print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: " %(boat.get_id(), boat.get_battery(), boat.get_location().get_id()) + str(boat.get_location().get_connections()) + ", {station: distance}")
 
-        choice = input("Enter Strategy:\n1-9 = Station X\nc\t= closest (algorithm)\ne\t= charge\nx\t= cancel. Your input: ")
+        choice = input("Enter Strategy:\n"
+                       "1-9 = Station X\n"
+                       "c\t= closest_station\n"
+                       "h\t= highest_demand\n\n"
+                       "p\t= pick up passengers\n"
+                       "d\t= drop off passengers\n"
+                       "e\t= charge\n"
+                       "x\t= cancel. Your input: ")
         # Choice: Move to closest station.
         if choice == "c":
             to = Strategies.Strategies.closest_neighbor(self.map, boat)
             boat.drive(to)
             self.move_station__input(boat)
         # Choice: Cancel.
+        elif choice == "h":
+            to = Strategies.Strategies.highest_demand(self.map, boat)
+            boat.drive(to)
+            self.move_station__input(boat)
+        elif choice == "p":
+            amount = input("\nHow many passengers to pick up? ")
+            boat.pickup(amount)
+            self.move_station__input(boat)
+        elif choice == "d":
+            amount = input("\nHow many passengers to drop off? ")
+            boat.dropoff(amount)
+            self.move_station__input(boat)
         elif choice == "x":
             print("CANCELED\n")
             self.move_boat__input()
@@ -112,10 +134,6 @@ class Boats:
             except Exception:
                 print("ERROR: wrong input for location\n")
                 self.move_station__input(boat)
-
-
-
-
 
     # Prints list of boats including their specs
     def printboatlist(self):

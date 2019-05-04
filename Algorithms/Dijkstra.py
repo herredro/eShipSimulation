@@ -1,32 +1,23 @@
-class Strategies:
-
-    def __init__(self, map):
-        self.map = map
-
-    @staticmethod
-    def closest_neighbor(map, boat):
-        options = boat.get_location().get_connections()
-        closest_tuple = sorted(options.items(), key=lambda x: x[1])
-        closest_stop = map.get_station_object(closest_tuple[0][0])
-        return closest_stop
-
-class Dijkstra:
+class Dijk():
     # ---------USE LIKE THIS:---------
     # dijk = Strategies.Dijkstra(map)
     # path = dijk.run(1, 7)
     # print("Path: %s" % path)
     def __init__(self, map):
+        #Strategies.__init__(self, map)
         self.map = map
+
+    def run(self, frm, to):
         self.openList = []
         self.closedList = []
         self.debug = False
-
-
-    def run(self, frm, to):
+        if frm==to: return False
+        self.openList = []
+        self.closedList = []
         self.fromto = [frm, to]
         # Starting with departure Vertex
         self.openList.append(DijkHeap(self.fromto[0], 0))
-        self.expand(self.openList[0])
+        cont = self.expand(self.openList[0])
         # Loop (while not found, determine the next chosen one)
         dist = False
         while not dist:
@@ -34,6 +25,8 @@ class Dijkstra:
         return dist
 
     def expand(self, element):
+
+        #Todo heres the bug
         self.openList.remove(element)
         self.closedList.append(element)
         # IF found destination, trace back the path
@@ -107,4 +100,4 @@ class DijkHeap:
         return ("V%d:%i" %(self.vert, self.dist))
 
     def __repr__(self):
-        return ("V%d:%i:%s" % (self.vert, self.dist, self.expanded))
+        return ("V%d:%i" % (self.vert, self.dist))

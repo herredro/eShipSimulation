@@ -1,5 +1,6 @@
 from tabulate import tabulate
 import Global as G
+import Algorithms.Dijkstra
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 # Class for basic Station (i.e. not a charger)
@@ -8,7 +9,7 @@ class Station:
     def __init__(self, id):
         self.id = id
         self.adjacent = {}
-        self.visitor = []
+        self.boats = []
         self.demand = 0
 
 
@@ -50,15 +51,15 @@ class Station:
 
     # Method for station to know it has a new visitor (boat)
     def add_visitor(self, boat):
-        self.visitor.append(boat)
+        self.boats.append(boat)
 
     # Method for station to know a boat has left
     def remove_visitor(self, boat):
-        self.visitor.remove(boat)
+        self.boats.remove(boat)
 
     # Return: All boats at this station
     def get_visitors(self):
-        return self.visitor
+        return self.boats
 
     def __repr__(self):
         return "Station " + str(self.id)
@@ -123,30 +124,47 @@ class Graph:
         self.num_stations = 0
         self.num_chargers = 0
 
+        self.dijk = Algorithms.Dijkstra.Dijk(self)
+
+    def create_inital_map(self, edgeList=G.edgeList):
+        for i in edgeList:
+            try:
+                if i[3] == 1:
+                    # Todo: if charger was vertex, it looses existing edges when transformed to charger
+                    self.add_charger(i[0])
+            except IndexError:
+                pass
+            self.add_edge(i[0], i[1], i[2])
+        # Todo Stations are sorted by edge-creation, not by actual station number
+        self.printedges_tabulate()
+
     def __iter__(self):
         return iter(self.stations.values())
 
     def add_edge(self, frm, to, cost = 0):
         if frm not in self.stations:
-            self.addstation(frm)
+            self.add_station(frm)
         if to not in self.stations:
-            self.addstation(to)
+            self.add_station(to)
         self.stations[frm].add_neighbor(to, cost)
 
     #Todo Maybe: move to Controller?
-    def addstation(self, node):
+    def add_station(self, node):
         self.num_stations = self.num_stations + 1
         new_vertex = Station(node)
         self.stations[node] = new_vertex
         return new_vertex
 
-    def addcharger(self, node):
+    def add_charger(self, node):
         # Charger is not a vertex
         #self.num_vertices = self.num_vertices + 1
         new_charger = Charger(node)
         self.stations[node] = new_charger
         self.chargers[node] = new_charger
         return new_charger
+
+    def get_all_stations(self):
+        return self.stations.values()
 
     # Input: Integer Return: Object
     def get_station_object(self, n):
@@ -156,9 +174,14 @@ class Graph:
             print("ERROR: new location not existing")
             return False
 
-    def get_all_stations(self):
-        return self.stations.values()
+    def get_distance(self, a, b):
+        return a.get_dist_fromID(b)
 
+    #Todo function: update demand
+    def update_demands(self):
+        pass
+
+    # PRINTS
     def get_network_string(self):
         mat = ""
         for x in self.stations.values():
@@ -174,53 +197,28 @@ class Graph:
                     mat += "%s" % (y)
                 mat += "]\t"
         return(mat)
-
     def get_network_tabulate(self):
         stationnames = []
         boats = []
         total = []
         for stationnum in self.stations.keys():
             if type(self.stations[stationnum]) == Charger:
-                stationnames.append("S%s(+CH)" % (stationnum))
+                stationnames.append("⚡S%s:%i" % (stationnum, self.stations[stationnum].demand))
             else:
-                stationnames.append("S%s" %(stationnum))
-            boats.append(self.stations[stationnum].get_visitors())
+                stationnames.append("S%s:%i" %(stationnum, self.stations[stationnum].demand))
+            boatlist = self.stations[stationnum].get_visitors()
+            boatshere = []
+            for boat in boatlist:
+                boatshere.append("%s:%s" %(boat, boat.occupied))
+            boats.append(boatshere)
         total.append(stationnames)
         total.append(boats)
         return total
-
-    def get_distance(self, a, b):
-        return a.get_dist_fromID(b)
-
-    def get_highest_demand(self):
-        firstkey = self.stations.get(0, +1)
-        highest_demand_station = self.stations.get(firstkey)
-        for station in self.get_all_stations():
-            if station.demand > highest_demand_station.demand:
-                highest_demand_station = station
-        return highest_demand_station
-
     def printmapstate(self):
         print("STATIONS:")
         #print(self.map.get_network_matrix())
         check = self.get_network_tabulate()
         print(tabulate(check, tablefmt="fancy_grid"))
-
-
-
-    def create_inital_map(self, edgeList=G.edgeList):
-        for i in edgeList:
-            try:
-                if i[3] == 1:
-                    # Todo: if charger was vertex, it looses existing edges when transformed to charger
-                    self.addcharger(i[0])
-            except IndexError:
-                pass
-            self.add_edge(i[0], i[1], i[2])
-        # Todo Stations are sorted by edge-creation, not by actual station number
-        self.printedges_tabulate()
-
-    # Printing all edges visually
     def printedges_tabulate(self):
         tabs = []
         # vid = None
@@ -236,3 +234,8 @@ class Graph:
         print("EDGES:")
         print(tabulate(tabs, headers=['From', 'To', 'Distance'], tablefmt="fancy_grid"))
         #print("------------------------\n")
+
+
+
+
+
