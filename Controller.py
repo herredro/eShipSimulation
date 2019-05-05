@@ -10,6 +10,7 @@ from tabulate import tabulate
 class Boats:
     # Boat Controller has map, number of boats, boats themselves as dictionary
     def __init__(self, sim):
+        #SIMPY0-9
         self.sim = sim
         self.map = sim.map
         self.env = sim.env
