@@ -1,5 +1,9 @@
 import Global as G
 from Algorithms import Strategies
+from Network import Station
+from colorama import Fore, Back, Style
+
+
 
 
 class Boat:
@@ -13,6 +17,7 @@ class Boat:
         self.charging_speed = charging_speed
         self.battery= battery
         self.consumption = consumption
+        self.idle = True
 #        self.dijk = Strategies.Dijkstra(self.sim.map)
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
@@ -21,7 +26,7 @@ class Boat:
         old_loc = self.get_location()
         new_loc = stop
         # check if edge to new_loc is existing
-        if old_loc.isConnectedTo(new_loc):
+        if old_loc.is_connected_to(new_loc):
             distance = old_loc.get_distance(new_loc)
             bat = self.get_battery()
             # Check if battery sufficient. If yes: move.
@@ -50,6 +55,30 @@ class Boat:
                         self.drive(self.sim.map.get_station_object(nextS))
                         return True
                 else: print("ERROR Battery:\tNot enough for desired path")
+
+    def sp_drive(self, stop):
+        self.idle = 0
+        self.old_loc = self.get_location()
+        if type(stop) == int:
+            self.new_loc = self.sim.map.get_station_object(stop)
+        else: self.new_loc = stop
+        #distance = self.old_loc.get_distance(self.new_loc)
+        distance = self.sim.map.get_distance(self.old_loc, self.new_loc)
+        if self.drivable__battery(distance):
+            self.old_loc.remove_visitor(self)
+            self.set_location(self.new_loc)
+            self.discharge(distance)
+            print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)), end='')
+            print(Style.RESET_ALL)
+            yield self.sim.env.timeout(distance)
+            self.idle = 1
+            print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s arrived at %s" % (self.sim.env.now, str(self), str(stop)), end='')
+            print(Style.RESET_ALL)
+            self.new_loc.add_visitor(self)
+            return True
+        else:
+            print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
+            return False
 
     def pickup(self, amount):
         if self.location.demand > 0:

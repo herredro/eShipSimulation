@@ -25,7 +25,7 @@ class Station:
         return self.adjacent
 
     # Boolean: True if both stations are adjacent
-    def isConnectedTo(self, station):
+    def is_connected_to(self, station):
         id = station.get_id()
         if id in self.adjacent:
             return True
@@ -36,13 +36,11 @@ class Station:
         return self.id
 
     # Return: Distance to a specified station
-    def get_distance(self, neighbor):
-        # ToDo Figure out how to avoid non-existing path
-        try:
-            distance = int(self.adjacent[neighbor.get_id()])
-        # Todo more specific
-        except Exception:
-            print()
+    def get_distance(self, to):
+        if self.is_connected_to(to):
+            distance = int(self.adjacent[to.get_id()])
+        else:
+            distance = self.dijk.run(self.get_id(), to.get_id())[0][0]
         return distance
 
     # Todo create one method ID_to_object and erase this method
@@ -175,7 +173,11 @@ class Graph:
             return False
 
     def get_distance(self, a, b):
-        return a.get_dist_fromID(b)
+        if a.is_connected_to(b):
+            distance = int(a.adjacent[b.get_id()])
+        else:
+            distance = self.dijk.run(a.get_id(), b.get_id())[0][0]
+        return distance
 
     #Todo function: update demand
     def update_demands(self):
@@ -215,7 +217,7 @@ class Graph:
         total.append(boats)
         return total
     def printmapstate(self):
-        print("STATIONS:")
+        print("\nSTATIONS:")
         #print(self.map.get_network_matrix())
         check = self.get_network_tabulate()
         print(tabulate(check, tablefmt="fancy_grid"))

@@ -3,11 +3,23 @@ import Controller as Controller
 import Network as Map
 import Global as G
 import Algorithms.Strategies as Strategies
+from colorama import Fore, Back, Style
 
 class Simulation:
     def __init__(self):
         #SimPy #Todo attach process?
         self.env = simpy.Environment()
+
+        print(Fore.BLACK + Back.GREEN + "SOME TEXT")
+        print(Fore.BLACK + Back.GREEN + "SOME MORE")
+        print(Fore.BLACK + Back.CYAN + "ANND MORE")
+
+
+        print(Fore.RED + 'some red text')
+        print(Back.GREEN + 'and with a green background')
+        print(Style.DIM + 'and in dim text')
+        print(Style.RESET_ALL)
+        print('back to normal now')
 
         print("BOAT SIMULATOR\nINITIAL SETTINGS:\n")
         self.map = Map.Graph(self.env)
@@ -20,7 +32,8 @@ class Simulation:
         # Controller Boats #NewBoat: self.cb.new_boat(1, bat=1000)
         self.cb = Controller.Boats(self)
 
-        if G.ui_choice:         self.ui_choice()
+        if G.simpy:             self.simpy()
+        elif G.ui_choice:       self.ui_choice()
         elif G.manual:          self.manual()
         else:                   self.strat_pick_drop()
 
@@ -29,13 +42,23 @@ class Simulation:
         self.cb.create_basic_boats(numBoats2create=int(boatnum))
         self.cb.printboatlist()
         # Simulation-loop
-        choice = input("Choose mode: m=manual, s=semi-auto, a=auto (with pickup/dropoff (max): ")
+        choice = input("Choose mode: m=manual, sp=SimPy, s=semi-auto, a=auto (with pickup/dropoff (max): ")
         # Chosen "manual"
         if choice == "m":
             self.cb.move_boat__input()
         # Chosen "pickup_highest_demand"
         elif choice == "sp":
-            pass
+            cont = 1
+            while cont:
+                self.cb.simpy_boat_UI()
+
+            # strategy = self.strategy.highest_demand
+            # print("Simpy mode: Pursue highest demand.")
+            # rounds = input("How many rounds? ")
+            # for i in range(int(rounds)):
+            #     self.cb.sp_fleet_move(strategy=strategy)
+            # print("stopped at time %s" %self.env.now)
+            # self.env.run()
         elif choice == "s":
             #Todo better UI Output
             while True:
@@ -52,6 +75,16 @@ class Simulation:
             rounds = input("How many rounds? ")
             for i in range(int(rounds)):
                 self.cb.fleet_move_demand(strategy=strategy, pu_quant='max', do_quant='max')
+    def simpy(self):
+        self.cb.create_basic_boats(numBoats2create=2, bat=1000)
+        self.cb.simpy_fleet_dest_UI()
+
+        # # >>>WORKS !!!<<<
+        # strategy = Strategies.Strategies.closest_neighbor
+        # self.cb.sp_fleet_dest_strategy(strategy)
+        # self.cb.sp_fleet_dest_strategy(strategy)
+        # self.cb.sp_fleet_dest_strategy(strategy)
+
 
     def manual(self):
         self.cb.create_basic_boats(numBoats2create=G.numBoats)
