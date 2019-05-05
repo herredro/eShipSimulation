@@ -1,7 +1,6 @@
 from tabulate import tabulate
 import Global as G
 import Algorithms.Dijkstra
-#ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 # Class for basic Station (i.e. not a charger)
 class Station:
@@ -42,7 +41,7 @@ class Station:
             distance = int(self.adjacent[neighbor.get_id()])
         # Todo more specific
         except Exception:
-            print()
+            print("ERROR getdist: ???")
         return distance
 
     # Todo create one method ID_to_object and erase this method

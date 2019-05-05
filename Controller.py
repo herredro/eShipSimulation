@@ -15,7 +15,6 @@ class Boats:
         self.env = sim.env
         self.numBoats = 0
         self.boats = {}
-        # ToDo decide: static or instance?
         self.move_strategy = Strategies.Strategies(self.map)
 
     # Creates a Boat and adds to boat dict.
@@ -112,7 +111,6 @@ class Boats:
         # Choice: Charge.
         elif choice == "e":
             if type(boat.get_location()) == Net.Charger:
-                # Todo charge max
                 duration = input("How long should boat charge? (type 'max' for full charge)")
                 if duration == "max":
                     boat.get_location().serve(boat, -1)
