@@ -21,7 +21,6 @@ class Boat:
         old_loc = self.get_location()
         new_loc = stop
         # check if edge to new_loc is existing
-        # Todo Implement: Path should exist even though there is no direct edge
         if old_loc.isConnectedTo(new_loc):
             distance = old_loc.get_distance(new_loc)
             bat = self.get_battery()
@@ -62,7 +61,6 @@ class Boat:
                 elif self.location.demand < space_left:
                     self.occupied = self.location.demand
                     self.location.demand = 0
-            #Todo implement more pickups
             else:
                 amount = int(amount)
                 if amount > space_left:

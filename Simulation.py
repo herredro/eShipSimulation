@@ -34,6 +34,8 @@ class Simulation:
         if choice == "m":
             self.cb.move_boat__input()
         # Chosen "pickup_highest_demand"
+        elif choice == "sp":
+            pass
         elif choice == "s":
             #Todo better UI Output
             while True:

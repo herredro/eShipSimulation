@@ -16,7 +16,6 @@ class Boats:
         self.env = sim.env
         self.numBoats = 0
         self.boats = {}
-        # ToDo decide: static or instance?
         self.move_strategy = Strategies.Strategies(self.map)
 
     # Creates a Boat and adds to boat dict.
@@ -50,7 +49,7 @@ class Boats:
     def fleet_move(self, strategy, pu_quant=None, do_quant=None):
         for boat in self.boats.values():
             nextstation = strategy(self.map, boat)
-            boat.drive(nextstation)
+            self.drive_proc = self.env.process(boat.drive(nextstation))
             self.map.printmapstate()
 
 
