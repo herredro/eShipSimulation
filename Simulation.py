@@ -1,35 +1,31 @@
 import simpy
 import Controller as Controller
 import Network as Map
+import Passengers
 import Global as G
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
+
 
 class Simulation:
     def __init__(self):
         #SimPy #Todo attach process?
         self.env = simpy.Environment()
-
-        print(Fore.BLACK + Back.GREEN + "SOME TEXT")
-        print(Fore.BLACK + Back.GREEN + "SOME MORE")
-        print(Fore.BLACK + Back.CYAN + "ANND MORE")
-
-
-        print(Fore.RED + 'some red text')
-        print(Back.GREEN + 'and with a green background')
-        print(Style.DIM + 'and in dim text')
         print(Style.RESET_ALL)
-        print('back to normal now')
-
         print("BOAT SIMULATOR\nINITIAL SETTINGS:\n")
         self.map = Map.Graph(self.env)
         self.strategy = Strategies.Strategies(self.map)
         # Initial Map can be modified in Global.py
         self.map.create_inital_map()
-        self.map.get_station_object(1).add_demand(50)
-        self.map.get_station_object(2).add_demand(100)
-        self.map.get_station_object(3).add_demand(150)
-        # Controller Boats #NewBoat: self.cb.new_boat(1, bat=1000)
+        self.map.add_initial_demand()
+        self.map.generate_initial_demands(G.initial_demand)
+
+        # self.map.get_station_object(1).add_demand(50)
+        # self.map.get_station_object(2).add_demand(100)
+        # self.map.get_station_object(3).add_demand(150)
+
+
+        # # Controller Boats #NewBoat: self.cb.new_boat(1, bat=1000)
         self.cb = Controller.Boats(self)
 
         if G.simpy:             self.simpy()
@@ -50,7 +46,7 @@ class Simulation:
         elif choice == "sp":
             cont = 1
             while cont:
-                self.cb.simpy_boat_UI()
+                self.cb.sp_ui_boat_choice()
 
             # strategy = self.strategy.highest_demand
             # print("Simpy mode: Pursue highest demand.")
@@ -77,9 +73,13 @@ class Simulation:
                 self.cb.fleet_move_demand(strategy=strategy, pu_quant='max', do_quant='max')
     def simpy(self):
         self.cb.create_basic_boats(numBoats2create=2, bat=1000)
-        self.cb.simpy_fleet_dest_UI()
+        strategy = self.strategy.highest_new_demand
+        self.cb.sp_fleet_move_algo(strategy, until=220)
 
-        # # >>>WORKS !!!<<<
+
+        # WORKING: UI for fleet coordination with simpy
+        #self.cb.sp_ui_fleet_destination()
+
         # strategy = Strategies.Strategies.closest_neighbor
         # self.cb.sp_fleet_dest_strategy(strategy)
         # self.cb.sp_fleet_dest_strategy(strategy)

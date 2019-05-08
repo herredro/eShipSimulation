@@ -4,6 +4,8 @@ from Algorithms import Strategies as Strategies
 import Global as G
 from tabulate import tabulate
 from colorama import Fore, Back, Style
+import simpy
+
 
 # Controller for Map and Boats. While Map and Boat classes provide basic functionality,
 # the controller takes care of decisions and actions such as creation and movements
@@ -11,7 +13,6 @@ from colorama import Fore, Back, Style
 class Boats:
     # Boat Controller has map, number of boats, boats themselves as dictionary
     def __init__(self, sim):
-        #SIMPY0-9
         self.sim = sim
         self.map = sim.map
         self.env = sim.env
@@ -38,22 +39,7 @@ class Boats:
             self.map.get_station_object(1).add_visitor(boat)
             self.numBoats = self.numBoats + 1
 
-    def fleet_move_demand(self, strategy, pu_quant, do_quant):
-        for boat in self.boats.values():
-            nextstation = strategy(self.map, boat)
-            boat.drive(nextstation)
-            boat.pickup(pu_quant)
-            boat.dropoff(do_quant)
-            self.map.update_demands()
-            self.map.printmapstate()
-
-    def fleet_move(self, strategy, pu_quant=None, do_quant=None):
-        for boat in self.boats.values():
-            nextstation = strategy(self.map, boat)
-            boat.drive(nextstation)
-            self.map.printmapstate()
-
-    def simpy_boat_UI(self):
+    def sp_ui_boat_choice(self):
         #self.map.printmapstate()
         #self.printboatlist()
         print("Which Boat to move (x to cancel)? Possible boats are: ", end='')
@@ -67,20 +53,20 @@ class Boats:
             try:
                 choice = int(choice)
                 boat = self.boats[choice]
-                self.simpy_destination_UI(boat)
+                self.sp_destination_manual(boat)
             except Exception:
                 print("ERROR: wrong input (choosing boat)\n")
-                self.simpy_boat_UI()
+                self.sp_ui_boat_choice()
 
-    def simpy_fleet_dest_UI(self):
+    def sp_ui_fleet_destination(self):
         try:
             for boat in self.boats.keys():
                 if self.boats[boat].idle:
-                    self.simpy_destination_UI(self.boats[boat])
+                    self.sp_destination_manual(self.boats[boat])
         except Exception as e:
-            print("ERROR simpy_destination: %s\n" %e)
+            print("ERROR simpy_destination: %s\n" % e)
 
-    def simpy_destination_UI(self, boat):
+    def sp_destination_manual(self, boat):
         self.sp_printtime()
         self.printboatlist()
         self.map.printmapstate()
@@ -103,29 +89,80 @@ class Boats:
                 choice_int = int(choice)
                 to = self.map.get_station_object(choice_int)
                 #Simpy
-                self.env.process(boat.sp_drive(to))
-                # Todo SimPy: See what happens when leaving out step()
+                self.env.process(boat.drive(to))
                 self.env.step()
             except Exception:
                 print("ERROR: wrong input for location\n")
-                self.simpy_destination_UI(boat)
+                self.sp_destination_manual(boat)
         while not self.some_boat_idle():
             self.env.step()
-        self.simpy_fleet_dest_UI()
+        if self.env.peek() == self.env.now:
+            self.env.step()
+        self.sp_ui_fleet_destination()
+
+    def sp_fleet_move_algo(self, strategy, until):
+        while self.env.now < until:
+            try:
+                self.sp_printtime()
+                self.printboatlist()
+                self.map.printmapstate()
+                for boat in self.boats.values():
+                    if boat.idle:
+                        next_station = strategy(self.map, boat)
+                        self.env.process(boat.drive(next_station))
+                        boat.pickup(10)
+                        boat.dropoff(10)
+                        # Todo Simpy: More than one step needed?
+                        self.env.step()
+                        while not self.some_boat_idle():
+                            self.env.step()
+                        while self.env.peek() == self.env.now:
+                            self.env.step()
+            except simpy.core.EmptySchedule as e:
+                print("ERROR Simpy: Empty Schedule: %s breaking the loop.\n" % e)
+                stop = True
+                self.env.run()
+                break
+        #self.sp_fleet_move_algo(strategy, until)
 
 
-        # next = input("\nMore? y=more_actions, x=run_till_end, else: type command...")
-        # print("\n\n\n")
-        # if next == "y":
-        #     while not self.some_boat_idle():
-        #         self.env.step()
-        #     self.simpy_fleet_dest_UI()
-        # elif next == "x":
-        #     self.env.run()
-        #     self.map.printmapstate()
-        # else:
-        #     exec(next)
-        #     self.simpy_fleet_dest_UI()
+
+    # Prints list of boats including their specs
+    def printboatlist(self):
+        tabs = []
+        for b in self.boats.values():
+            id = b.get_id()
+            loc = str(b.get_location().get_id())
+            if not b.idle: loc += " (soon)"
+            bat = str(b.get_battery()) + "%"
+            chs = b.get_charging_speed()
+            con = b.get_consumption()
+            tabs.append([id, loc, bat, chs, con])
+        print("BOATS:")
+        print(tabulate(tabs, headers=['ID', 'Location', 'Battery', 'Ch.Spd.', 'Cons.'], tablefmt="fancy_grid"))
+
+    def sp_printtime(self):
+        print(Fore.BLACK + Back.LIGHTGREEN_EX + "SIMPY t=%s" % (self.sim.env.now))
+        print(Style.RESET_ALL)
+
+    def some_boat_idle(self):
+        self.some_idle = False
+        for boat in self.boats.keys():
+            if self.boats[boat].idle:
+                self.some_idle = True
+        return self.some_idle
+
+
+
+    # OLD MOVEMENTS WITHOUT SIMPY
+    def fleet_move_demand(self, strategy, pu_quant, do_quant):
+        for boat in self.boats.values():
+            nextstation = strategy(self.map, boat)
+            boat.drive(nextstation)
+            boat.pickup(pu_quant)
+            boat.dropoff(do_quant)
+            self.map.update_demands()
+            self.map.printmapstate()
 
     # Method (loop) that asks user which boat to move
     #Todo Q: Uses demand?
@@ -208,27 +245,3 @@ class Boats:
             except Exception:
                 print("ERROR: wrong input for location\n")
                 self.move_station__input(boat)
-
-    # Prints list of boats including their specs
-    def printboatlist(self):
-        tabs = []
-        for b in self.boats.values():
-            id = b.get_id()
-            loc = b.get_location().get_id()
-            bat = str(b.get_battery()) + "%"
-            chs = b.get_charging_speed()
-            con = b.get_consumption()
-            tabs.append([id, loc, bat, chs, con])
-        print("BOATS:")
-        print(tabulate(tabs, headers=['ID', 'Location', 'Battery', 'Ch.Spd.', 'Cons.'], tablefmt="fancy_grid"))
-
-    def sp_printtime(self):
-        print(Fore.BLACK + Back.LIGHTGREEN_EX + "SIMPY t=%s" % (self.sim.env.now))
-        print(Style.RESET_ALL, end="")
-
-    def some_boat_idle(self):
-        self.some_idle = False
-        for boat in self.boats.keys():
-            if self.boats[boat].idle:
-                self.some_idle = True
-        return self.some_idle

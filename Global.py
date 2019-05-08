@@ -14,7 +14,7 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-
+initial_demand = [50, 30, 60, 80]
 
 
 

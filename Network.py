@@ -1,6 +1,7 @@
 from tabulate import tabulate
 import Global as G
 import Algorithms.Dijkstra
+import Passengers
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 # Class for basic Station (i.e. not a charger)
@@ -12,13 +13,43 @@ class Station:
         self.boats = []
         self.demand = 0
 
-
-    def add_demand(self, num):
-        self.demand = num
-
     # Method to add an adjacent station
     def add_neighbor(self, neighbor, weight=0):
         self.adjacent[neighbor] = weight
+
+    def init_demand(self, passengers_object):
+        self.passengers = passengers_object
+
+    def get_demand(self):
+        return len(self.passengers.passengers)
+
+    def get_demand_to(self, stationnum):
+        demand_to = 0
+        for passenger in self.passengers.passengers:
+            if passenger.dest == stationnum:
+                demand_to +=1
+        return demand_to
+
+    def get_passengers(self, amount):
+        passengers_boarding = []
+        # Todo Demand: Implement for amount<passengers_available
+        for i in range(amount):
+            try:
+                passengers_boarding.append(self.passengers.passengers.pop(0))
+            except IndexError as e:
+                print("WARNING only %i boarded, not %i" %(i, amount))
+        return passengers_boarding
+
+    # def get_passengers_to(self, stationnum, amount):
+    #     passengers_boarding = []
+    #     for i in amount:
+    #         if passenger.dest == stationnum:
+    #             passengers_boarding.append(self.passengers.passengers.pop(0))
+    #     return passengers_boarding
+
+    def remove_demand(amount):
+        pass
+
 
     # Return: all adjacent stations as a dictionary
     def get_connections(self):
@@ -115,15 +146,16 @@ class Charger(Station):
 # Todo Comment
 class Graph:
     #Graph has list of stations (vertex pbject) and list of chargers (charger object)
-    def __init__(self, env):
+    def __init__(self, env = None):
         self.env = env
         self.stations = {}
         self.chargers = {}
         self.num_stations = 0
         self.num_chargers = 0
-
         self.dijk = Algorithms.Dijkstra.Dijk(self)
 
+
+    # Todo Demand: needs to be drawn from distribution
     def create_inital_map(self, edgeList=G.edgeList):
         for i in edgeList:
             try:
@@ -135,6 +167,19 @@ class Graph:
             self.add_edge(i[0], i[1], i[2])
         # Todo Stations are sorted by edge-creation, not by actual station number
         self.printedges_tabulate()
+
+    def add_initial_demand(self):
+        stationkeys = []
+        for stationkey in self.stations.keys():
+            stationkeys.append(stationkey)
+        for station in self.stations.values():
+            station.init_demand(Passengers.Passengers(self, stationkeys))
+
+    def generate_initial_demands(self, num):
+        i = 0
+        for station in self.stations.values():
+            station.passengers.add_multiple_demand(num[i], arrivaltime=self.env.now)
+            i+=1
 
     def __iter__(self):
         return iter(self.stations.values())
@@ -173,7 +218,8 @@ class Graph:
             return False
 
     def get_distance(self, a, b):
-        if a.is_connected_to(b):
+        if a == b: return 0
+        elif a.is_connected_to(b):
             distance = int(a.adjacent[b.get_id()])
         else:
             distance = self.dijk.run(a.get_id(), b.get_id())[0][0]
@@ -203,15 +249,16 @@ class Graph:
         stationnames = []
         boats = []
         total = []
+        # Todo Demand: update for new demand
         for stationnum in self.stations.keys():
             if type(self.stations[stationnum]) == Charger:
-                stationnames.append("⚡S%s:%i" % (stationnum, self.stations[stationnum].demand))
+                stationnames.append("⚡S%s:%i" % (stationnum, self.stations[stationnum].get_demand()))
             else:
-                stationnames.append("S%s:%i" %(stationnum, self.stations[stationnum].demand))
+                stationnames.append("S%s:%i" %(stationnum, self.stations[stationnum].get_demand()))
             boatlist = self.stations[stationnum].get_visitors()
             boatshere = []
             for boat in boatlist:
-                boatshere.append("%s:%s" %(boat, boat.occupied))
+                boatshere.append("%s:%s" %(boat, len(boat.passengers)))
             boats.append(boatshere)
         total.append(stationnames)
         total.append(boats)
