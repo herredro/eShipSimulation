@@ -71,10 +71,15 @@ class Simulation:
             rounds = input("How many rounds? ")
             for i in range(int(rounds)):
                 self.cb.fleet_move_demand(strategy=strategy, pu_quant='max', do_quant='max')
+
+
     def simpy(self):
         self.cb.create_basic_boats(numBoats2create=2, bat=1000)
-        strategy = self.strategy.highest_new_demand
-        self.cb.sp_fleet_move_algo(strategy, until=220)
+        strategy = self.strategy.closest_neighbor
+        self.cb.sp_fleet_move_algo(strategy)
+        #self.env.process(self.cb.sp_fleet_move_algo(strategy))
+
+
 
 
         # WORKING: UI for fleet coordination with simpy

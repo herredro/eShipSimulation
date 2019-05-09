@@ -2,7 +2,10 @@ from tabulate import tabulate
 import Global as G
 import Algorithms.Dijkstra
 import Passengers
+import logging
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
+
+
 
 # Class for basic Station (i.e. not a charger)
 class Station:
@@ -37,7 +40,7 @@ class Station:
             try:
                 passengers_boarding.append(self.passengers.passengers.pop(0))
             except IndexError as e:
-                print("WARNING only %i boarded, not %i" %(i, amount))
+                logging.warning("WARNING nothing to board")
         return passengers_boarding
 
     # def get_passengers_to(self, stationnum, amount):
@@ -91,10 +94,13 @@ class Station:
         return self.boats
 
     def __repr__(self):
-        return "Station " + str(self.id)
+        return "S%s:%i" % (str(self.id), self.get_demand())
 
     def __str__(self):
-        return "Station " + str(self.id)
+        return "S%s:%i" % (str(self.id), self.get_demand())
+
+
+
     # OLD:
     #     return 'Station' + str(self.id) + ' has route to: ' \
     #            + str([x.id for x in self.adjacent]) + ' with distance ' \
@@ -118,6 +124,7 @@ class Charger(Station):
         oldbat = boat.get_battery()
         if (self.occupiedBy == None):
             print("ERROR CHARGER: Cannot serve when no boat docked")
+            logging.error("ERROR CHARGER: Cannot serve when no boat docked")
         if (self.occupiedBy == boat):
             if (chargeNeeded == -1) or (chargeNeeded > 100-boat.get_battery()):
                 current_bat = boat.get_battery()
@@ -143,6 +150,13 @@ class Charger(Station):
         else:
             self.occupiedBy = None
 
+    def __repr__(self):
+        return "C%s:%i" % (str(self.id), self.get_demand())
+
+    def __str__(self):
+        return "C%s:%i" % (str(self.id), self.get_demand())
+
+
 # Todo Comment
 class Graph:
     #Graph has list of stations (vertex pbject) and list of chargers (charger object)
@@ -153,6 +167,12 @@ class Graph:
         self.num_stations = 0
         self.num_chargers = 0
         self.dijk = Algorithms.Dijkstra.Dijk(self)
+
+    def demand_left(self):
+        for station in self.stations.values():
+            if station.get_demand() > 0:
+                return True
+        return False
 
 
     # Todo Demand: needs to be drawn from distribution
@@ -215,6 +235,7 @@ class Graph:
             return self.stations[n]
         else:
             print("ERROR: new location not existing")
+            logging.error("new location not existing")
             return False
 
     def get_distance(self, a, b):
@@ -258,7 +279,7 @@ class Graph:
             boatlist = self.stations[stationnum].get_visitors()
             boatshere = []
             for boat in boatlist:
-                boatshere.append("%s:%s" %(boat, len(boat.passengers)))
+                boatshere.append("%s" %(boat))
             boats.append(boatshere)
         total.append(stationnames)
         total.append(boats)

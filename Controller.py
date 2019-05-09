@@ -67,7 +67,7 @@ class Boats:
             print("ERROR simpy_destination: %s\n" % e)
 
     def sp_destination_manual(self, boat):
-        self.sp_printtime()
+        self.printtime()
         self.printboatlist()
         self.map.printmapstate()
         print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: " % (
@@ -100,31 +100,43 @@ class Boats:
             self.env.step()
         self.sp_ui_fleet_destination()
 
-    def sp_fleet_move_algo(self, strategy, until):
-        while self.env.now < until:
-            try:
-                self.sp_printtime()
-                self.printboatlist()
-                self.map.printmapstate()
-                for boat in self.boats.values():
-                    if boat.idle:
-                        next_station = strategy(self.map, boat)
-                        self.env.process(boat.drive(next_station))
+    def sp_fleet_move_algo(self, strategy):
+        while self.map.demand_left():
+            self.printtime()
+            self.printboatlist()
+            self.map.printmapstate()
+            for boat in self.boats.values():
+                if boat.idle:
+                    next_station = strategy(self.map, boat)
+                    self.env.process(boat.drive(next_station))
+            self.env.run()
+        print("FINAL")
+        self.printtime()
+        self.printboatlist()
+        self.map.printmapstate()
+
+    def sp_fleet_move_algoWORKBUTFLAWED(self, strategy):
+        demand_left = self.map.demand_left()
+        while self.map.demand_left():
+            self.printtime()
+            self.printboatlist()
+            self.map.printmapstate()
+            for boat in self.boats.values():
+                if boat.idle:
+                    next_station = strategy(self.map, boat)
+                    driving = self.env.process(boat.drive(next_station))
+
+                    #self.env.process(boat.pickup(10, driving))
+                    # yield driving
+                    if driving:
                         boat.pickup(10)
                         boat.dropoff(10)
-                        # Todo Simpy: More than one step needed?
-                        self.env.step()
-                        while not self.some_boat_idle():
-                            self.env.step()
-                        while self.env.peek() == self.env.now:
-                            self.env.step()
-            except simpy.core.EmptySchedule as e:
-                print("ERROR Simpy: Empty Schedule: %s breaking the loop.\n" % e)
-                stop = True
-                self.env.run()
-                break
-        #self.sp_fleet_move_algo(strategy, until)
-
+            self.env.run()
+            demand_left = self.map.demand_left()
+        print("FINAL")
+        self.printtime()
+        self.printboatlist()
+        self.map.printmapstate()
 
 
     # Prints list of boats including their specs
@@ -141,8 +153,8 @@ class Boats:
         print("BOATS:")
         print(tabulate(tabs, headers=['ID', 'Location', 'Battery', 'Ch.Spd.', 'Cons.'], tablefmt="fancy_grid"))
 
-    def sp_printtime(self):
-        print(Fore.BLACK + Back.LIGHTGREEN_EX + "SIMPY t=%s" % (self.sim.env.now))
+    def printtime(self):
+        print(Fore.BLACK + Back.LIGHTGREEN_EX + "t=%s" % (self.sim.env.now))
         print(Style.RESET_ALL)
 
     def some_boat_idle(self):

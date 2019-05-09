@@ -5,8 +5,7 @@ from colorama import Fore, Back, Style
 import logging
 
 
-logging.basicConfig(level=logging.INFO, filemode="w", filename="test.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
-log_pickdrop = logging.getLogger("Pick/Drop")
+
 
 
 class Boat:
@@ -25,50 +24,56 @@ class Boat:
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
     def drive(self, stop):
-        self.idle = 0
-        self.old_loc = self.get_location()
-        if type(stop) == int:
-            self.new_loc = self.sim.map.get_station_object(stop)
-        else: self.new_loc = stop
-        distance = self.sim.map.get_distance(self.old_loc, self.new_loc)
-        if self.drivable__battery(distance):
-            self.old_loc.remove_visitor(self)
-            self.set_location(self.new_loc)
-            self.discharge(distance)
-            print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)), end='')
-            print(Style.RESET_ALL)
-            yield self.sim.env.timeout(distance)
-            self.idle = 1
-            print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s arrived at %s" % (self.sim.env.now, str(self), str(stop)), end='')
-            print(Style.RESET_ALL)
-            self.new_loc.add_visitor(self)
-            return True
-        else:
-            print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
-            return False
+        while True:
+            self.idle = 0
+            self.old_loc = self.get_location()
+            if type(stop) == int:
+                self.new_loc = self.sim.map.get_station_object(stop)
+            else: self.new_loc = stop
+            distance = self.sim.map.get_distance(self.old_loc, self.new_loc)
+            if self.drivable__battery(distance):
+                self.old_loc.remove_visitor(self)
+                self.set_location(self.new_loc)
+                self.discharge(distance)
+                logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
+                print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Style.RESET_ALL)
+                yield self.sim.env.timeout(distance)
+                self.idle = 1
+                logging.info("SIMPY t=%s: %s arrived at %s" % (self.sim.env.now, str(self), str(stop)))
+                print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s arrived at %s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Style.RESET_ALL)
+                self.new_loc.add_visitor(self)
+                self.dropoff()
+                self.pickup(self.capacity)
+                #yield self.sim.env.process(self.pickup(10))
+                #yield self.sim.env.process(self.dropoff(10))
+                return self.location.get_demand()
+            else:
+                print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
+                return False
 
-    def pickup(self, amount):
+    def pickup(self, amount, proc=None):
+        #yield proc
         if self.location.get_demand() > 0:
             space_left = self.capacity - len(self.passengers)
             for passenger in self.location.get_passengers(space_left):
                 self.passengers.append(passenger)
             if amount > space_left:
-                logging.info("%s:\t%s picked up (only) %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
-            else: logging.info("%s:\tPicked up %s" % (self.sim.env.now, space_left))
-        else: logging.warning("%s:\t%s has nothing to pick up at %s" % (self.sim.env.now, str(self), str(self.location)))
+                print("%s:\t%s PICKED (only) %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
+            else: print("%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
+        else: print("%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
 
 
-    def dropoff(self, amount):
-        if len(self.passengers) > 0:
-            if amount > len(self.passengers):
-                logging.info("%s:\t%s dropped off (only) %s (not %s)" % (self.sim.env.now, str(self), len(self.passengers), amount))
-                self.passengers = []
-            else:
-                # dropoff #amount passengers
-                for i in range(amount):
-                    self.passengers.pop(0)
-                logging.info("%s:\t%s dropped off %s. Left with: %s" % (self.sim.env.now, self, amount, len(self.passengers)))
-        else: logging.warning("%s:\t%s has nothing to drop off" %(self.sim.env.now, str(self)))
+    def dropoff(self):
+        tobedropped = []
+        for passenger in self.passengers:
+            if passenger.dest == self.location.get_id():
+                tobedropped.append(passenger)
+        dropped = len(tobedropped)
+        for passenger in tobedropped:
+            self.passengers.remove(passenger)
+        print("%s:\t%s DROPPED %i passengers at %s"%(self.sim.env.now, str(self), dropped, self.location))
 
     def charge(self, time):
         if (self.battery + (time * self.charging_speed)) > 100:
@@ -117,7 +122,16 @@ class Boat:
             self.id, self.battery, self.charging_speed, self.consumption))
 
     def __str__(self):
-        return str(self.id)
+        if self.idle:
+            return (str(self.id)+" @" + str(self.location))
+        else:
+            return (str(self.id) + " (@" + str(self.location)+")")
+
+    def __str__(self):
+        if self.idle:
+            return "%s:%s" %(str(self.id), str(len(self.passengers)))
+        else:
+            return "%s:%s" % (str(self.id), str(len(self.passengers)))
 
     def __repr__(self):
         return str(self.id)

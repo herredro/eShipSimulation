@@ -16,15 +16,6 @@ class Strategies:
 
     @staticmethod
     def highest_demand(map, boat):
-        firstkey = map.stations.get(0, +1)
-        highest_demand_station = map.stations.get(firstkey)
-        for station in map.get_all_stations():
-            if station.demand > highest_demand_station.demand:
-                highest_demand_station = station
-        return highest_demand_station
-
-    @staticmethod
-    def highest_new_demand(map, boat):
         max_station = map.get_station_object(map.stations.get(0, +1))
         for station in map.get_all_stations():
             if station.get_demand() > max_station.get_demand():

@@ -1,10 +1,14 @@
 import random
 import Network as Map
+random.seed(123)
 
 class Passenger:
     def __init__(self, arrivaltime, dest):
         self.arrivaltime = arrivaltime
         self.dest = dest
+
+    def __str__(self):
+        return "P->%s"%self.dest
 
 
 class Passengers:
