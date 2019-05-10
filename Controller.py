@@ -109,9 +109,10 @@ class Boats:
             self.map.printmapstate()
             for boat in self.boats.values():
                 if boat.idle:
-                    next_decision = self.decision.take(boat)
+                    self.env.process(self.decision.take(boat))
+                    #next_decision = self.decision.take(boat)
                     #next_station = strategy(self.map, boat)
-                    self.env.process(next_decision)
+                    #self.env.process(next_decision)
                     #self.env.process()
             self.env.run()
         print("FINAL")

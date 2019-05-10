@@ -35,6 +35,20 @@ class Decision:
         at_charger = type(boat.location) == Network.Charger
         bat_low = boat.battery < 30
         if bat_low & at_charger:
+            charged = self.sim.env.process(boat.get_location().serve(boat, 200))
+            yield charged
+        next_station = self.move_strategy.closest_neighbor(self.map, boat)
+        self.sim.env.process(boat.drive(next_station))
+
+
+        # else: next station
+        return next_station
+
+    def takeWORKS(self, boat):
+        # if at charger and bat < 30: charge
+        at_charger = type(boat.location) == Network.Charger
+        bat_low = boat.battery < 30
+        if bat_low & at_charger:
             return boat.get_location().serve(boat, 200)
         else:
             next_station = self.move_strategy.closest_neighbor(self.map, boat)

@@ -7,6 +7,9 @@ debug = 0
 simpy = 1
 ui_choice = 1
 
+d_charge = 1
+d_passenger = 0
+
 #SIMULATION INIT VARIABLES
 startVertex = 1
 numBoats = 2
@@ -19,7 +22,7 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [20, 30, 40, 50, 60, 70, 80]
+initial_demand = [40, 50, 70, 90, 110, 130, 150]
 
 
 

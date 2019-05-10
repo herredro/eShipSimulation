@@ -3,6 +3,7 @@ import Global as G
 import Algorithms.Dijkstra
 import Passengers
 import logging
+import simpy
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 
@@ -118,30 +119,38 @@ class Charger(Station):
         self.occupiedBy = None
         # counting all energy that charger transfered to boats
         self.energyConsumed = 0
+        self.resource = simpy.Resource(env, capacity=1)
 
     # Boat can be at Charger but since Charger is a Station too, serve() needs to be called to process charging
     def serve(self, boat, chargeNeeded):
-        self.dock(boat)
-        oldbat = boat.get_battery()
-        if (self.occupiedBy == None):
-            print("ERROR CHARGER: Cannot serve when no boat docked")
-            logging.error("ERROR CHARGER: Cannot serve when no boat docked")
-        if (self.occupiedBy == boat):
-            # if (chargeNeeded == -1) or (chargeNeeded > 100-boat.get_battery()):
 
-            current_bat = boat.get_battery()
-            chargeNeeded = 100 - current_bat
-            # Todo Charge: Realistic timeout
-            charge = self.env.process(boat.charge(chargeNeeded))
-            # else:
-            #     self.env.process(boat.charge(chargeNeeded))
-            self.energyConsumed += chargeNeeded
-            yield charge
-            new_battery = boat.get_battery()
-            print("%s:\t%s charged in %dt (from %d%% to %d%%)" % (self.env.now, str(boat.get_id()), (chargeNeeded/boat.get_charging_speed()), oldbat, new_battery))
-            self.undock()
-        else:
-            print("ERROR CHARGER: Charger already occupied")
+        with self.resource.request() as req:
+            yield req
+            if G.d_charge: print("%s: \t%s CHARGE START @%s" % (self.env.now, str(boat.get_id()), str(self)))
+            self.dock(boat)
+            oldbat = boat.get_battery()
+            if (self.occupiedBy == None):
+                if G.d_charge: print("ERROR CHARGER: Cannot serve when no boat docked")
+                logging.error("ERROR CHARGER: Cannot serve when no boat docked")
+            if (self.occupiedBy == boat):
+                # if (chargeNeeded == -1) or (chargeNeeded > 100-boat.get_battery()):
+
+                current_bat = boat.get_battery()
+                chargeNeeded = 100 - current_bat
+                # Todo Charge: Realistic timeout
+                charge = self.env.process(boat.charge(chargeNeeded))
+                # else:
+                #     self.env.process(boat.charge(chargeNeeded))
+                self.energyConsumed += chargeNeeded
+                yield charge
+                new_battery = boat.get_battery()
+                if G.d_charge: print("%s: \t%s CHARGE STOP  @%s (%d%%-%d%%)" % (self.env.now, str(boat.get_id()), str(self), current_bat, new_battery))
+                self.undock()
+            else:
+                print("ERROR CHARGER: Charger already occupied")
+
+            #yield self.env.timeout(int(chargeNeeded/boat.charging_speed))
+
 
     # Docking boat to the charger when it is already positioned at Charging Station
     def dock(self, boat):

@@ -68,9 +68,11 @@ class Boat:
             for passenger in self.location.get_passengers(space_left):
                 self.passengers.append(passenger)
             if amount > space_left:
-                print("%s:\t%s PICKED (only) %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
-            else: print("%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
-        else: print("%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
+                if G.d_passenger: print("%s:\t%s PICKED (only) %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
+            else:
+                if G.d_passenger: print("%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
+        else:
+            if G.d_passenger: print("%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
 
 
     def dropoff(self):
@@ -81,7 +83,7 @@ class Boat:
         dropped = len(tobedropped)
         for passenger in tobedropped:
             self.passengers.remove(passenger)
-        print("%s:\t%s DROPPED %i passengers at %s"%(self.sim.env.now, str(self), dropped, self.location))
+        if G.d_passenger: print("%s:\t%s DROPPED %i passengers at %s"%(self.sim.env.now, str(self), dropped, self.location))
 
 
 
