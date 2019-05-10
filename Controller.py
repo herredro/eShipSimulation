@@ -1,6 +1,7 @@
 import Network as Net
 import Boat as Boat
 from Algorithms import Strategies as Strategies
+
 import Global as G
 from tabulate import tabulate
 from colorama import Fore, Back, Style
@@ -19,6 +20,7 @@ class Boats:
         self.numBoats = 0
         self.boats = {}
         self.move_strategy = Strategies.Strategies(self.map)
+        self.decision = Strategies.Decision(self.sim)
 
     # Creates a Boat and adds to boat dict.
     def new_boat(self, id, loc=-1, bat=100, chsp=1, cons=1):
@@ -89,7 +91,7 @@ class Boats:
                 choice_int = int(choice)
                 to = self.map.get_station_object(choice_int)
                 #Simpy
-                self.env.process(boat.drive(to))
+                self.env.process(boat.take(to))
                 self.env.step()
             except Exception:
                 print("ERROR: wrong input for location\n")
@@ -107,8 +109,10 @@ class Boats:
             self.map.printmapstate()
             for boat in self.boats.values():
                 if boat.idle:
-                    next_station = strategy(self.map, boat)
-                    self.env.process(boat.drive(next_station))
+                    next_decision = self.decision.take(boat)
+                    #next_station = strategy(self.map, boat)
+                    self.env.process(next_decision)
+                    #self.env.process()
             self.env.run()
         print("FINAL")
         self.printtime()
@@ -124,7 +128,7 @@ class Boats:
             for boat in self.boats.values():
                 if boat.idle:
                     next_station = strategy(self.map, boat)
-                    driving = self.env.process(boat.drive(next_station))
+                    driving = self.env.process(boat.take(next_station))
 
                     #self.env.process(boat.pickup(10, driving))
                     # yield driving
@@ -170,7 +174,7 @@ class Boats:
     def fleet_move_demand(self, strategy, pu_quant, do_quant):
         for boat in self.boats.values():
             nextstation = strategy(self.map, boat)
-            boat.drive(nextstation)
+            boat.take(nextstation)
             boat.pickup(pu_quant)
             boat.dropoff(do_quant)
             self.map.update_demands()
@@ -214,12 +218,12 @@ class Boats:
         # Choice: Move to closest station.
         if choice == "c":
             to = Strategies.Strategies.closest_neighbor(self.map, boat)
-            boat.drive(to)
+            boat.take(to)
             self.move_station__input(boat)
         # Choice: Cancel.
         elif choice == "h":
             to = Strategies.Strategies.highest_demand(self.map, boat)
-            boat.drive(to)
+            boat.take(to)
             self.move_station__input(boat)
         elif choice == "p":
             amount = input("\nHow many passengers to pick up? ")
@@ -252,7 +256,7 @@ class Boats:
                 choice_int = int(choice)
                 to = self.map.get_station_object(choice_int)
                 #self.drive(boat, to)
-                boat.drive(to)
+                boat.take(to)
                 self.move_station__input(boat)
             except Exception:
                 print("ERROR: wrong input for location\n")

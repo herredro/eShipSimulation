@@ -109,9 +109,10 @@ class Station:
 class Charger(Station):
 
     # Charger is subclass of Vertex with additional charging functionality
-    def __init__(self, id):
+    def __init__(self, id, env):
         # Necessary Vertex inits
         super().__init__(id)
+        self.env = env
         # Charger inits:
         # means the charging spot at this station is occupied by "None/BoatX"
         self.occupiedBy = None
@@ -126,14 +127,18 @@ class Charger(Station):
             print("ERROR CHARGER: Cannot serve when no boat docked")
             logging.error("ERROR CHARGER: Cannot serve when no boat docked")
         if (self.occupiedBy == boat):
-            if (chargeNeeded == -1) or (chargeNeeded > 100-boat.get_battery()):
-                current_bat = boat.get_battery()
-                chargeNeeded = 100 - current_bat
-                self.occupiedBy.charge(chargeNeeded)
-            else:
-                self.occupiedBy.charge(int(chargeNeeded))
+            # if (chargeNeeded == -1) or (chargeNeeded > 100-boat.get_battery()):
+
+            current_bat = boat.get_battery()
+            chargeNeeded = 100 - current_bat
+            # Todo Charge: Realistic timeout
+            charge = self.env.process(boat.charge(chargeNeeded))
+            # else:
+            #     self.env.process(boat.charge(chargeNeeded))
             self.energyConsumed += chargeNeeded
-            print("Boat %s charged +%d (from %d%% to %d%%)" % (str(boat.get_id()), (boat.get_charging_speed() * chargeNeeded), oldbat, boat.get_battery()))
+            yield charge
+            new_battery = boat.get_battery()
+            print("%s:\t%s charged in %dt (from %d%% to %d%%)" % (self.env.now, str(boat.get_id()), (chargeNeeded/boat.get_charging_speed()), oldbat, new_battery))
             self.undock()
         else:
             print("ERROR CHARGER: Charger already occupied")
@@ -143,12 +148,14 @@ class Charger(Station):
         self.occupiedBy = boat
         boat.set_location(self)
 
+
     # Undock boat at charger. Boat remains at charger Vertex
     def undock(self):
         if self.occupiedBy is None:
             print("ERROR CHARGER: Dock undocking: Dock already Empty")
         else:
             self.occupiedBy = None
+
 
     def __repr__(self):
         return "C%s:%i" % (str(self.id), self.get_demand())
@@ -221,7 +228,7 @@ class Graph:
     def add_charger(self, node):
         # Charger is not a vertex
         #self.num_vertices = self.num_vertices + 1
-        new_charger = Charger(node)
+        new_charger = Charger(node, self.env)
         self.stations[node] = new_charger
         self.chargers[node] = new_charger
         return new_charger

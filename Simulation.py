@@ -74,7 +74,7 @@ class Simulation:
 
 
     def simpy(self):
-        self.cb.create_basic_boats(numBoats2create=2, bat=1000)
+        self.cb.create_basic_boats(numBoats2create=2, bat=100)
         strategy = self.strategy.closest_neighbor
         self.cb.sp_fleet_move_algo(strategy)
         #self.env.process(self.cb.sp_fleet_move_algo(strategy))

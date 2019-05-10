@@ -10,7 +10,7 @@ import logging
 
 class Boat:
     # Boat specific variables
-    def __init__(self, sim, id, location, battery = 100, capacity = 10, charging_speed = 1, consumption = 1):
+    def __init__(self, sim, id, location, battery = 100, capacity = 10, charging_speed = 10, consumption = 1):
         self.sim = sim
         self.id = ("B" + str(id))
         self.location = location
@@ -53,6 +53,14 @@ class Boat:
                 print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
                 return False
 
+    def charge(self, charge_needed):
+        #Todo Charge: implement 100 max
+        self.idle = 0
+        time = int(charge_needed / self.charging_speed)
+        yield self.sim.env.timeout(time)
+        self.battery = self.battery + charge_needed
+        self.idle = 1
+
     def pickup(self, amount, proc=None):
         #yield proc
         if self.location.get_demand() > 0:
@@ -75,13 +83,8 @@ class Boat:
             self.passengers.remove(passenger)
         print("%s:\t%s DROPPED %i passengers at %s"%(self.sim.env.now, str(self), dropped, self.location))
 
-    def charge(self, time):
-        if (self.battery + (time * self.charging_speed)) > 100:
-            self.battery = 100
-            return 100
-        else:
-            self.battery = self.battery + (time * self.charging_speed)
-            return self.battery
+
+
 
     # Method to check if distance is doable with battery load
     def drivable__battery(self,  distance):

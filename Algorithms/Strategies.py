@@ -1,4 +1,5 @@
-test=1
+import Network
+
 class Strategies:
 
     def __init__(self, map):
@@ -22,3 +23,28 @@ class Strategies:
             if station.get_demand() > max_station.get_demand():
                 max_station = station
         return max_station
+
+class Decision:
+    def __init__(self, sim):
+        self.sim = sim
+        self.map = sim.map
+        self.move_strategy = Strategies(self.map)
+
+    def take(self, boat):
+        # if at charger and bat < 30: charge
+        at_charger = type(boat.location) == Network.Charger
+        bat_low = boat.battery < 30
+        if bat_low & at_charger:
+            return boat.get_location().serve(boat, 200)
+        else:
+            next_station = self.move_strategy.closest_neighbor(self.map, boat)
+            return boat.drive(next_station)
+
+        # else: next station
+        return next_station
+
+    def charge(self, boat):
+        self.sim.env.process(boat.location.serve(boat, 100 - boat.battery))
+
+    def pickup(self):
+        pass
