@@ -14,6 +14,7 @@ class Strategies:
         closest_stop = map.get_station_object(closest_tuple[0][0])
         return closest_stop
 
+    #Todo if occ==cap && next station==curr_stat --> Move somewhere
     @staticmethod
     def highest_demand(map, boat):
         max_station = map.get_station_object(map.stations.get(0, +1))

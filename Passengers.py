@@ -5,6 +5,8 @@ random.seed(123)
 class Passenger:
     def __init__(self, arrivaltime, dest):
         self.arrivaltime = arrivaltime
+        # Todo metrics record waiting time
+        self.time_processed = -10000
         self.dest = dest
 
     def __str__(self):
