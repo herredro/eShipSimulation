@@ -3,6 +3,7 @@ from Algorithms import Strategies
 from Network import Station
 from colorama import Fore, Back, Style
 import logging
+import Algorithms.Strategies as Strat
 
 
 
@@ -20,11 +21,16 @@ class Boat:
         self.battery= battery
         self.consumption = consumption
         self.idle = True
-#        self.dijk = Strategies.Dijkstra(self.sim.map)
+        self.strat = Strat.Decision(sim, self)
+
+        #self.dijk = Strategies.Dijkstra(self.sim.map)
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
     def drive(self, stop):
-        while True:
+        #while True:
+            self.sim.cb.printtime()
+            self.sim.cb.printboatlist()
+            self.sim.map.printmapstate()
             self.idle = 0
             self.old_loc = self.get_location()
             if type(stop) == int:
@@ -48,7 +54,7 @@ class Boat:
                 self.pickup(self.capacity)
                 #yield self.sim.env.process(self.pickup(10))
                 #yield self.sim.env.process(self.dropoff(10))
-                return self.location.get_demand()
+                return distance
             else:
                 print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
                 return False

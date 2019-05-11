@@ -25,24 +25,26 @@ class Strategies:
         return max_station
 
 class Decision:
-    def __init__(self, sim):
+    def __init__(self, sim, boat):
         self.sim = sim
         self.map = sim.map
         self.move_strategy = Strategies(self.map)
+        self.boat = boat
 
-    def take(self, boat):
-        # if at charger and bat < 30: charge
-        at_charger = type(boat.location) == Network.Charger
-        bat_low = boat.battery < 30
-        if bat_low & at_charger:
-            charged = self.sim.env.process(boat.get_location().serve(boat, 200))
-            yield charged
-        next_station = self.move_strategy.closest_neighbor(self.map, boat)
-        self.sim.env.process(boat.drive(next_station))
-
-
-        # else: next station
-        return next_station
+    def take(self):
+        while True:
+        #    if self.boat.idle:
+                # if at charger and bat < 30: charge
+                at_charger = type(self.boat.location) == Network.Charger
+                bat_low = self.boat.battery < 30
+                if bat_low & at_charger:
+                    charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
+                    yield charged
+                next_station = self.move_strategy.closest_neighbor(self.map, self.boat)
+                drive = self.sim.env.process(self.boat.drive(next_station))
+                yield drive
+                # else: next station
+                #return next_station
 
     def takeWORKS(self, boat):
         # if at charger and bat < 30: charge

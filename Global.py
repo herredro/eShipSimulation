@@ -3,7 +3,7 @@ logging.basicConfig(level=logging.INFO, filemode="w", filename="zim.log", format
 log_pickdrop = logging.getLogger("Pick/Drop")
 
 
-debug = 0
+debug = 1
 simpy = 1
 ui_choice = 1
 

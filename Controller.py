@@ -20,7 +20,7 @@ class Boats:
         self.numBoats = 0
         self.boats = {}
         self.move_strategy = Strategies.Strategies(self.map)
-        self.decision = Strategies.Decision(self.sim)
+        self.decision = Strategies.Decision(self.sim, self)
 
     # Creates a Boat and adds to boat dict.
     def new_boat(self, id, loc=-1, bat=100, chsp=1, cons=1):
@@ -102,7 +102,29 @@ class Boats:
             self.env.step()
         self.sp_ui_fleet_destination()
 
-    def sp_fleet_move_algo(self, strategy):
+    def sp_fleet_move_algo(self, strategy=None):
+        gen = self.decision.take()
+        #while self.map.demand_left():
+            # self.printtime()
+            # self.printboatlist()
+            # self.map.printmapstate()
+
+        val = self.env.process(gen)
+        print(val)
+
+                #yield boat
+                #self.env.process(self.decision.take(boat))
+                #next_decision = self.decision.take(boat)
+                #next_station = strategy(self.map, boat)
+                #self.env.process(next_decision)
+                #self.env.process()
+        self.env.run()
+        print("FINAL")
+        self.printtime()
+        self.printboatlist()
+        self.map.printmapstate()
+
+    def sp_fleet_move_algoWORKBUTFLAWED(self, strategy):
         while self.map.demand_left():
             self.printtime()
             self.printboatlist()
@@ -115,29 +137,6 @@ class Boats:
                     #self.env.process(next_decision)
                     #self.env.process()
             self.env.run()
-        print("FINAL")
-        self.printtime()
-        self.printboatlist()
-        self.map.printmapstate()
-
-    def sp_fleet_move_algoWORKBUTFLAWED(self, strategy):
-        demand_left = self.map.demand_left()
-        while self.map.demand_left():
-            self.printtime()
-            self.printboatlist()
-            self.map.printmapstate()
-            for boat in self.boats.values():
-                if boat.idle:
-                    next_station = strategy(self.map, boat)
-                    driving = self.env.process(boat.take(next_station))
-
-                    #self.env.process(boat.pickup(10, driving))
-                    # yield driving
-                    if driving:
-                        boat.pickup(10)
-                        boat.dropoff(10)
-            self.env.run()
-            demand_left = self.map.demand_left()
         print("FINAL")
         self.printtime()
         self.printboatlist()
