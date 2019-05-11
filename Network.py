@@ -7,7 +7,7 @@ import simpy
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 
-
+#
 # Class for basic Station (i.e. not a charger)
 class Station:
     # Station knows its adjacent stations and boats that are present
