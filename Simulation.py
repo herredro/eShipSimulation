@@ -76,12 +76,13 @@ class Simulation:
     def simpy(self):
         #self.cb.create_basic_boats(numBoats2create=3, bat=100)
         self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=100)
-        self.cb.new_boat(2, loc=self.map.get_station_object(2), bat=100)
-        #self.cb.new_boat(3, loc=self.map.get_station_object(3), bat=100)
-        for boat in self.cb.boats.values():
-            self.env.process(boat.strat.take())
+        self.cb.new_boat(2, loc=self.map.get_station_object(1), bat=100)
+        self.cb.new_boat(3, loc=self.map.get_station_object(1), bat=100)
+        #for boat in self.cb.boats.values():
+            #self.env.process(boat.strat.take())
         print(self.env.peek())
-        self.env.run(until=400)
+        #self.env.process(self.cb.take_strat())
+        self.env.run(until=500)
         strategy = self.strategy.closest_neighbor
         #self.cb.sp_fleet_move_algo(strategy)
         #self.env.process(self.cb.sp_fleet_move_algo(strategy))

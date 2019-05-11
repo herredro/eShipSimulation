@@ -22,8 +22,15 @@ class Boats:
         self.move_strategy = Strategies.Strategies(self.map)
         self.decision = Strategies.Decision(self.sim, self)
 
+    def take_strat(self):
+        while True:
+            self.printtime()
+            self.printboatlist()
+            self.map.printmapstate()
+            for boat in self.boats.values():
+                yield self.env.process(boat.strat.take())
     # Creates a Boat and adds to boat dict.
-    def new_boat(self, id, loc=-1, bat=100, chsp=1, cons=1):
+    def new_boat(self, id, loc=G.locaction, bat=G.battery, chsp=G.chargingspeed, cons=G.consumption):
         # default location -1 means to position boat at start-vertex
         if loc == -1:
             loc = self.map.get_station_object(G.startVertex)

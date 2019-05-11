@@ -2,6 +2,12 @@ import logging
 logging.basicConfig(level=logging.INFO, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
 log_pickdrop = logging.getLogger("Pick/Drop")
 
+#BOAT DEFAULTS
+locaction=-1
+battery=100
+chargingspeed=10
+consumption=1
+
 
 debug = 1
 simpy = 1
@@ -35,9 +41,9 @@ edgeList2 = [[1, 2, 10, 1],
             [1, 9,  5],
             [9, 1,  5, 1]]
 
-edgeList =[[1, 2, 5, 1],
+edgeList =     [[1, 2, 10, 1],
                 [2, 3, 15],
-                [3, 1, 10]]
+                [3, 1, 20]]
 
 edgeListFork = [[1, 2, 10, 1],
             [1, 3, 50],

@@ -32,7 +32,7 @@ class Decision:
         self.boat = boat
 
     def take(self):
-        while True:
+        while self.map.demand_left():
         #    if self.boat.idle:
                 # if at charger and bat < 30: charge
                 at_charger = type(self.boat.location) == Network.Charger

@@ -22,15 +22,17 @@ class Boat:
         self.consumption = consumption
         self.idle = True
         self.strat = Strat.Decision(sim, self)
+        self.sim.env.process(self.strat.take())
 
         #self.dijk = Strategies.Dijkstra(self.sim.map)
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
+
     def drive(self, stop):
         #while True:
-            self.sim.cb.printtime()
-            self.sim.cb.printboatlist()
-            self.sim.map.printmapstate()
+            # self.sim.cb.printtime()
+            # self.sim.cb.printboatlist()
+            # self.sim.map.printmapstate()
             self.idle = 0
             self.old_loc = self.get_location()
             if type(stop) == int:
@@ -42,7 +44,7 @@ class Boat:
                 self.set_location(self.new_loc)
                 self.discharge(distance)
                 logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
-                print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Fore.BLACK + Back.LIGHTYELLOW_EX + "SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
                 yield self.sim.env.timeout(distance)
                 self.idle = 1
@@ -62,7 +64,7 @@ class Boat:
     def charge(self, charge_needed):
         #Todo Charge: implement 100 max
         self.idle = 0
-        time = int(charge_needed / self.charging_speed)
+        time = charge_needed / self.charging_speed
         yield self.sim.env.timeout(time)
         self.battery = self.battery + charge_needed
         self.idle = 1
