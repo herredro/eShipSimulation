@@ -1,4 +1,5 @@
 from tabulate import tabulate
+from colorama import Fore, Back, Style
 import Global as G
 import Algorithms.Dijkstra
 import Passengers
@@ -27,12 +28,25 @@ class Station:
     def get_demand(self):
         return len(self.passengers.passengers)
 
-    def get_demand_to(self, stationnum):
+    # Todo Method to delete occurences in allPassengers (if pas. are taken)
+    def get_num_demand_to(self, stationnum):
         demand_to = 0
         for passenger in self.passengers.passengers:
             if passenger.dest == stationnum:
                 demand_to +=1
         return demand_to
+
+    def get_demand_to(self, station, amount):
+        pas = []
+        for passenger in self.passengers.passengers:
+            if passenger.dest == station.id:
+                pas.append(passenger)
+        for pa in pas:
+            self.passengers.passengers.remove(pa)
+        if len(pas) > amount:
+            return pas[:amount]
+        else:
+            return pas
 
     def get_passengers(self, amount):
         passengers_boarding = []
@@ -126,7 +140,9 @@ class Charger(Station):
 
         with self.resource.request() as req:
             yield req
-            if G.d_charge: print("%s: \t%s CHARGE START @%s" % (self.env.now, str(boat.get_id()), str(self)))
+            if G.d_charge:
+                print(Fore.BLACK + Back.LIGHTYELLOW_EX + "%s:\t%s\tCHARGE START @%s" % (self.env.now, str(boat), str(self)), end='')
+                print(Style.RESET_ALL)
             self.dock(boat)
             oldbat = boat.get_battery()
             if (self.occupiedBy == None):
@@ -144,7 +160,9 @@ class Charger(Station):
                 self.energyConsumed += chargeNeeded
                 yield charge
                 new_battery = boat.get_battery()
-                if G.d_charge: print("%s: \t%s CHARGE STOP  @%s (%d%%-%d%%)" % (self.env.now, str(boat.get_id()), str(self), current_bat, new_battery))
+                if G.d_charge:
+                    print(Fore.BLACK + Back.YELLOW + "%s:\t%s\tCHARGE STOP  @%s (%d%%-%d%%)" % (self.env.now, str(boat), str(self), current_bat, new_battery), end='')
+                    print(Style.RESET_ALL)
                 self.undock()
             else:
                 print("ERROR CHARGER: Charger already occupied")

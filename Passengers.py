@@ -1,6 +1,7 @@
 import random
 import Network as Map
 random.seed(123)
+from simpy import Resource
 
 class Passenger:
     def __init__(self, arrivaltime, dest):
@@ -8,6 +9,8 @@ class Passenger:
         # Todo metrics record waiting time
         self.time_processed = -10000
         self.dest = dest
+        #Todo Simpy: Make passenger Resource
+        #self.res = Resource(1)
 
     def __str__(self):
         return "P->%s"%self.dest
@@ -34,14 +37,6 @@ class Passengers:
     def add_multiple_demand(self, amount=1, arrivaltime=0):
         for i in range (0, amount):
             self.new(arrivaltime=arrivaltime)
-
-    def get_demand_to(self, stationnum):
-        demand = []
-        for passenger in self.passengers:
-            if passenger.dest == stationnum:
-                demand.append(passenger)
-        #Todo Method to delete occurences in allPassengers (if pas. are taken)
-        return demand
 
 
 

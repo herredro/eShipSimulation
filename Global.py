@@ -14,7 +14,7 @@ simpy = 1
 ui_choice = 1
 
 d_charge = 1
-d_passenger = 0
+debug_passenger = 1
 
 #SIMULATION INIT VARIABLES
 startVertex = 1

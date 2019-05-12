@@ -44,12 +44,12 @@ class Boat:
                 self.set_location(self.new_loc)
                 self.discharge(distance)
                 logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
-                print(Fore.BLACK + Back.LIGHTYELLOW_EX + "SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s\tDRIVING\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
                 yield self.sim.env.timeout(distance)
                 self.idle = 1
-                logging.info("SIMPY t=%s: %s arrived at %s" % (self.sim.env.now, str(self), str(stop)))
-                print(Fore.BLACK + Back.GREEN + "SIMPY t=%s: %s arrived at %s" % (self.sim.env.now, str(self), str(stop)), end='')
+                logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
+                print(Fore.BLACK + Back.GREEN + "%s:\t%s\tarrived\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
                 self.new_loc.add_visitor(self)
                 self.dropoff()
@@ -64,24 +64,51 @@ class Boat:
     def charge(self, charge_needed):
         #Todo Charge: implement 100 max
         self.idle = 0
-        time = charge_needed / self.charging_speed
+        time = int(charge_needed / self.charging_speed)
         yield self.sim.env.timeout(time)
         self.battery = self.battery + charge_needed
         self.idle = 1
 
-    def pickup(self, amount, proc=None):
-        #yield proc
+    def pickup(self, amount):
+        if self.location.get_demand() > 0:
+            before = len(self.passengers)
+            space_left = self.capacity - len(self.passengers)
+            to_be_pickedup = self.strat.pickup_priorities()
+            #more, i, new_pas = True, 0, None
+            new_pas, i = [], 0
+            while len(new_pas) < space_left:
+                try:
+                    new_pas.extend(self.location.get_demand_to(to_be_pickedup[i][1], space_left-len(new_pas)))
+                    i+=1
+                except IndexError as e:
+                    print("ERROR PICKUP: Not enough demand: %s" %e)
+                    break
+            for passenger in new_pas:
+                self.passengers.append(passenger)
+            after = len(self.passengers)
+            print(before, after)
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tPICKED\t%s\t @%s" % (self.sim.env.now, str(self), space_left, str(self.location)), end='')
+                print(Style.RESET_ALL)
+        else:
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.CYAN + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
+                print(Style.RESET_ALL)
+
+    def pickup_any(self, amount):
         if self.location.get_demand() > 0:
             space_left = self.capacity - len(self.passengers)
             for passenger in self.location.get_passengers(space_left):
                 self.passengers.append(passenger)
             if amount > space_left:
-                if G.d_passenger: print("%s:\t%s PICKED (only) %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
+                if G.debug_passenger: print("%s:\t%s PICKED (only) %s at station %s" % (
+                self.sim.env.now, str(self), space_left, str(self.location)))
             else:
-                if G.d_passenger: print("%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
+                if G.debug_passenger: print(
+                    "%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
         else:
-            if G.d_passenger: print("%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
-
+            if G.debug_passenger: print(
+                "%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
 
     def dropoff(self):
         tobedropped = []
@@ -91,7 +118,8 @@ class Boat:
         dropped = len(tobedropped)
         for passenger in tobedropped:
             self.passengers.remove(passenger)
-        if G.d_passenger: print("%s:\t%s DROPPED %i passengers at %s"%(self.sim.env.now, str(self), dropped, self.location))
+        if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s\tDROPPED\t%i\t @%s" % (self.sim.env.now, str(self), dropped, self.location), end='')
+        print(Style.RESET_ALL)
 
 
 

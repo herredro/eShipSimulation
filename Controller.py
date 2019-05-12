@@ -20,15 +20,7 @@ class Boats:
         self.numBoats = 0
         self.boats = {}
         self.move_strategy = Strategies.Strategies(self.map)
-        self.decision = Strategies.Decision(self.sim, self)
 
-    def take_strat(self):
-        while True:
-            self.printtime()
-            self.printboatlist()
-            self.map.printmapstate()
-            for boat in self.boats.values():
-                yield self.env.process(boat.strat.take())
     # Creates a Boat and adds to boat dict.
     def new_boat(self, id, loc=G.locaction, bat=G.battery, chsp=G.chargingspeed, cons=G.consumption):
         # default location -1 means to position boat at start-vertex
@@ -110,7 +102,7 @@ class Boats:
         self.sp_ui_fleet_destination()
 
     def sp_fleet_move_algo(self, strategy=None):
-        gen = self.decision.take()
+
         #while self.map.demand_left():
             # self.printtime()
             # self.printboatlist()
@@ -126,24 +118,6 @@ class Boats:
                 #self.env.process(next_decision)
                 #self.env.process()
         self.env.run()
-        print("FINAL")
-        self.printtime()
-        self.printboatlist()
-        self.map.printmapstate()
-
-    def sp_fleet_move_algoWORKBUTFLAWED(self, strategy):
-        while self.map.demand_left():
-            self.printtime()
-            self.printboatlist()
-            self.map.printmapstate()
-            for boat in self.boats.values():
-                if boat.idle:
-                    self.env.process(self.decision.take(boat))
-                    #next_decision = self.decision.take(boat)
-                    #next_station = strategy(self.map, boat)
-                    #self.env.process(next_decision)
-                    #self.env.process()
-            self.env.run()
         print("FINAL")
         self.printtime()
         self.printboatlist()
@@ -182,7 +156,7 @@ class Boats:
         for boat in self.boats.values():
             nextstation = strategy(self.map, boat)
             boat.take(nextstation)
-            boat.pickup(pu_quant)
+            boat.pickup_priorities(pu_quant)
             boat.dropoff(do_quant)
             self.map.update_demands()
             self.map.printmapstate()
@@ -234,7 +208,7 @@ class Boats:
             self.move_station__input(boat)
         elif choice == "p":
             amount = input("\nHow many passengers to pick up? ")
-            boat.pickup(amount)
+            boat.pickup_priorities(amount)
             self.move_station__input(boat)
         elif choice == "d":
             amount = input("\nHow many passengers to drop off? ")

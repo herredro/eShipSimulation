@@ -83,10 +83,9 @@ class Simulation:
         print(self.env.peek())
         #self.env.process(self.cb.take_strat())
         self.env.run(until=500)
-        strategy = self.strategy.closest_neighbor
-        #self.cb.sp_fleet_move_algo(strategy)
-        #self.env.process(self.cb.sp_fleet_move_algo(strategy))
 
+        self.cb.printboatlist()
+        self.map.printmapstate()
 
 
 
