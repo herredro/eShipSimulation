@@ -74,11 +74,14 @@ class Boat:
         self.battery = self.battery + charge_needed
         self.idle = 1
 
-    def pickup(self, amount):
+    def pickup(self, amount=None, restrictions=None):
         if self.location.get_demand() > 0:
+
+
+            #Todo implement restrictions
             before = len(self.passengers)
             space_left = self.capacity - len(self.passengers)
-            to_be_pickedup = self.strat.pickup_priorities()
+            to_be_pickedup = self.strat.pickup_priorities(restrictions)
             #more, i, new_pas = True, 0, None
             new_pas, i = [], 0
             while len(new_pas) < space_left:
@@ -92,6 +95,7 @@ class Boat:
                 self.passengers.append(passenger)
             after = len(self.passengers)
             self.stats.pickedup[self.sim.env.now] = len(new_pas)
+            yield self.sim.env.timeout(0)
             # Todo Stats: update reward to Statss-Class
             #Stats.boatreward[self]+=after
             if G.debug_passenger:
@@ -128,7 +132,14 @@ class Boat:
         self.stats.droppedoff[self.sim.env.now] = dropped
         if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s\tDROPPED\t%i\t @%s" % (self.sim.env.now, str(self), dropped, self.location), end='')
         print(Style.RESET_ALL)
+        yield self.sim.env.timeout(0)
 
+    def get_passenger_destinations(self):
+        destinations = []
+        for passenger in self.passengers:
+            if passenger.dest not in destinations:
+                destinations.append(passenger.dest)
+        return destinations
 
 
 
