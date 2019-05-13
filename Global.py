@@ -28,7 +28,7 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [40, 50, 70, 90, 110, 130, 150]
+initial_demand = [40, 50, 80, 90, 110, 130, 150]
 
 
 
@@ -43,7 +43,7 @@ edgeList2 = [[1, 2, 10, 1],
 
 edgeList =     [[1, 2, 10, 1],
                 [2, 3, 15],
-                [3, 1, 20]]
+                [3, 1, 20, 1]]
 
 edgeListFork = [[1, 2, 10, 1],
             [1, 3, 50],

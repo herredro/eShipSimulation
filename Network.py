@@ -41,12 +41,10 @@ class Station:
         for passenger in self.passengers.passengers:
             if passenger.dest == station.id:
                 pas.append(passenger)
+        pas = pas[:amount]
         for pa in pas:
             self.passengers.passengers.remove(pa)
-        if len(pas) > amount:
-            return pas[:amount]
-        else:
-            return pas
+        return pas
 
     def get_passengers(self, amount):
         passengers_boarding = []
@@ -194,8 +192,9 @@ class Charger(Station):
 # Todo Comment
 class Graph:
     #Graph has list of stations (vertex pbject) and list of chargers (charger object)
-    def __init__(self, env = None):
-        self.env = env
+    def __init__(self, sim = None):
+        self.sim = sim
+        self.env = sim.env
         self.stations = {}
         self.chargers = {}
         self.num_stations = 0

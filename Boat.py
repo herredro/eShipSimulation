@@ -4,6 +4,7 @@ from Network import Station
 from colorama import Fore, Back, Style
 import logging
 import Algorithms.Strategies as Strat
+import Stats
 
 
 
@@ -21,8 +22,11 @@ class Boat:
         self.battery= battery
         self.consumption = consumption
         self.idle = True
+        self.stats = Stats.Stats(self)
         self.strat = Strat.Decision(sim, self)
+        self.stats.droveto[0]=location.id
         self.sim.env.process(self.strat.take())
+
 
         #self.dijk = Strategies.Dijkstra(self.sim.map)
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
@@ -51,6 +55,7 @@ class Boat:
                 logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
                 print(Fore.BLACK + Back.GREEN + "%s:\t%s\tarrived\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
+                self.stats.droveto[self.sim.env.now] = self.new_loc.id
                 self.new_loc.add_visitor(self)
                 self.dropoff()
                 self.pickup(self.capacity)
@@ -86,9 +91,11 @@ class Boat:
             for passenger in new_pas:
                 self.passengers.append(passenger)
             after = len(self.passengers)
-            print(before, after)
+            self.stats.pickedup[self.sim.env.now] = len(new_pas)
+            # Todo Stats: update reward to Statss-Class
+            #Stats.boatreward[self]+=after
             if G.debug_passenger:
-                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tPICKED\t%s\t @%s" % (self.sim.env.now, str(self), space_left, str(self.location)), end='')
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
                 print(Style.RESET_ALL)
         else:
             if G.debug_passenger:
@@ -118,6 +125,7 @@ class Boat:
         dropped = len(tobedropped)
         for passenger in tobedropped:
             self.passengers.remove(passenger)
+        self.stats.droppedoff[self.sim.env.now] = dropped
         if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s\tDROPPED\t%i\t @%s" % (self.sim.env.now, str(self), dropped, self.location), end='')
         print(Style.RESET_ALL)
 

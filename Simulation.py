@@ -5,6 +5,9 @@ import Passengers
 import Global as G
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
+import Stats
+import matplotlib.pyplot as plt
+
 
 
 class Simulation:
@@ -13,7 +16,7 @@ class Simulation:
         self.env = simpy.Environment()
         print(Style.RESET_ALL)
         print("BOAT SIMULATOR\nINITIAL SETTINGS:\n")
-        self.map = Map.Graph(self.env)
+        self.map = Map.Graph(self)
         self.strategy = Strategies.Strategies(self.map)
         # Initial Map can be modified in Global.py
         self.map.create_inital_map()
@@ -27,6 +30,7 @@ class Simulation:
 
         # # Controller Boats #NewBoat: self.cb.new_boat(1, bat=1000)
         self.cb = Controller.Boats(self)
+
 
         if G.simpy:             self.simpy()
         elif G.ui_choice:       self.ui_choice()
@@ -75,27 +79,23 @@ class Simulation:
 
     def simpy(self):
         #self.cb.create_basic_boats(numBoats2create=3, bat=100)
-        self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=100)
-        self.cb.new_boat(2, loc=self.map.get_station_object(1), bat=100)
-        self.cb.new_boat(3, loc=self.map.get_station_object(1), bat=100)
-        #for boat in self.cb.boats.values():
-            #self.env.process(boat.strat.take())
-        print(self.env.peek())
-        #self.env.process(self.cb.take_strat())
-        self.env.run(until=500)
+        self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=100, cons=0.5)
+        self.cb.new_boat(2, loc=self.map.get_station_object(1), bat=100, cons=1)
+        self.cb.new_boat(3, loc=self.map.get_station_object(1), bat=100, cons=2)
 
+        self.env.run(until=500)
         self.cb.printboatlist()
         self.map.printmapstate()
 
+        # boat = self.cb.boats[1]
+        # plot = boat.stats.plot_free([boat.stats.pickedup, boat.stats.droppedoff])
+        # plot.show()
 
 
-        # WORKING: UI for fleet coordination with simpy
-        #self.cb.sp_ui_fleet_destination()
+        # boat.stats.save_dict(boat.stats.droveto)
+        # boat.stats.open_dict("data.txt")
 
-        # strategy = Strategies.Strategies.closest_neighbor
-        # self.cb.sp_fleet_dest_strategy(strategy)
-        # self.cb.sp_fleet_dest_strategy(strategy)
-        # self.cb.sp_fleet_dest_strategy(strategy)
+
 
 
     def manual(self):

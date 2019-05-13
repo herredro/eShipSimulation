@@ -1,5 +1,6 @@
 import Network
 import Passengers
+import Algorithms.Dijkstra
 
 class Strategies:
 
@@ -50,8 +51,9 @@ class Decision:
     def __init__(self, sim, boat):
         self.sim = sim
         self.map = sim.map
-        self.move_strategy = Strategies(self.map)
         self.boat = boat
+        self.move_strategy = Strategies(self.map)
+        self.dijk = Algorithms.Dijkstra.Dijk(self.map)
 
         self.all_stations = []
         self.pass_dest_at_location = []
@@ -81,11 +83,13 @@ class Decision:
             # Don't pick up passengers with dest. boat.loc
             if distance == 0: distance = 99
             prio[station][0] = total/distance
-        prio_sort = sorted(prio, key=self.sortkey)
-        return prio
+        prio_sort = sorted(prio, key=self.sortkey0, reverse=True)
+        return prio_sort
 
-    def sortkey(self, item):
+    def sortkey0(self, item):
         return item[0]
+    def sortkey1(self, item):
+        return item[1]
 
     def update_vals(self):
         # if len(self.boat.passengers) < 1:
@@ -108,19 +112,45 @@ class Decision:
     def evaluate(self):
         pass
 
+    def charger_dists(self):
+        charger_infos = []
+        charger_dists = []
+        for charger in self.map.chargers.values():
+            # charger_infos.append([(self.map.get_distance(self.boat.location, charger)), charger])
+            charger_infos.append(self.dijk.run(self.boat.location.get_id(), charger.get_id()))
+        # charger_infos = sorted(charger_infos, key=self.sortkey0, reverse=True)
+        for i in range(len(charger_infos)):
+            charger_dists.append(charger_infos[i][0][0])
+        return charger_dists
+
     def take(self):
         strat = self.move_strategy.closest_neighbor
         #strat = self.move_strategy.max_reward
         while self.map.demand_left():
-        #    if self.boat.idle:
+            # if self.boat.idle:
             self.update_vals()
-            #next_station = self.evaluate()
 
+            # CHARGER DISTANCES
+            charger_dists = self.charger_dists()
+            print(charger_dists)
+
+            # BOOLEANS
             at_charger = type(self.boat.location) == Network.Charger
             bat_low = self.boat.battery < 30
-            if bat_low & at_charger:
+            can_postpone = False
+            for charger in charger_dists:
+                if charger*self.boat.consumption < self.boat.battery:
+                    can_postpone = True
+            #
+
+            # URGENT CHARGING, CANT POSTPONE
+            if bat_low and at_charger and not can_postpone:
+                if len(self.boat.passengers)>0:
+                    print("PROBLEM CHARGE: charging with passengers")
                 charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
                 yield charged
+
+            # REGULAR DRIVE
             next_station = strat(self.map, self.boat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive

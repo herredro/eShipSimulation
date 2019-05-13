@@ -11,13 +11,13 @@ class Dijk():
         self.openList = []
         self.closedList = []
         self.debug = False
-        if frm==to: return False
+        #if frm==to: return [[0]]
         self.openList = []
         self.closedList = []
         self.fromto = [frm, to]
         # Starting with departure Vertex
         self.openList.append(DijkHeap(self.fromto[0], 0))
-        cont = self.expand(self.openList[0])
+        dist = self.expand(self.openList[0])
         # Loop (while not found, determine the next chosen one)
         dist = False
         while not dist:
@@ -25,12 +25,11 @@ class Dijk():
         return dist
 
     def expand(self, element):
-
         #Todo heres the bug
         self.openList.remove(element)
         self.closedList.append(element)
         # IF found destination, trace back the path
-        if element.getID() == self.fromto[1]:
+        if (element.getID() == self.fromto[1] and len(self.closedList)!=1) or (element.getID() == self.fromto[0] and len(self.closedList)>1):
             if self.debug: print("FOUND DESTINATION! From %d to %d, distance = %d"%(self.fromto[0], self.fromto[1], element.getDist()))
             path = []
             current = element
@@ -44,16 +43,21 @@ class Dijk():
         if self.debug: print("Next to expand: %s, its Neighbors: %s" % (element, nextPushesList))
 
         for new in nextPushesList:
+            loop_found = False
             new_in_closed = True
             new_in_open = True
             existing_in_open = None
             for closed in self.closedList:
                 if new[0] == closed.getID():
                     new_in_closed = False
+            if new[0] == self.fromto[0]:
+                loop_found = True
             for open in self.openList:
                 if new[0] == open.getID():
                     new_in_open = False
                     existing_in_open = open
+            if loop_found:
+                self.openList.append(DijkHeap(new[0], (new[1] + element.getDist()), element))
             if not new_in_closed: pass #ignore
             elif new_in_open:
                 #add it to open
