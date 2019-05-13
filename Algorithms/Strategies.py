@@ -69,27 +69,37 @@ class Decision:
             self.pass_dest_at_location[i].append(0)
             self.pass_dest_boarded[i].append(0)
 
-    def pickup_priorities(self):
+    def pickup_priorities(self, restrictions=None):
         self.update_vals()
         prio = []
-        for station in self.map.get_all_stations():
-            prio.append([0])
-            prio[station.id-1].append(station)
-        for station in range(len(self.all_stations)):
+        if restrictions != None:
+            for i in range(len(restrictions)):
+                station = self.map.get_station_object(restrictions[i])
+                prio.append([0])
+                prio[i].append(station)
+        else:
+            for station in self.map.get_all_stations():
+                prio.append([0])
+                prio[station.id - 1].append(station)
+
+        for station in range(len(prio)):
             total = self.pass_dest_at_location[station][1]
             if len(self.boat.passengers) > 0:
                 total += self.pass_dest_boarded[station][1]
             distance = self.map.get_distance(self.pass_dest_boarded[station][0], self.boat.location)
             # Don't pick up passengers with dest. boat.loc
-            if distance == 0: distance = 99
+            if distance == 0:
+                distance = self.dijk.run(self.pass_dest_boarded[station][0].id, self.boat.location.id)[0][0]
             prio[station][0] = total/distance
         prio_sort = sorted(prio, key=self.sortkey0, reverse=True)
         return prio_sort
 
     def sortkey0(self, item):
         return item[0]
-    def sortkey1(self, item):
-        return item[1]
+
+    def sortkey000(self, item):
+        return item[0][0][0]
+
 
     def update_vals(self):
         # if len(self.boat.passengers) < 1:
@@ -112,48 +122,86 @@ class Decision:
     def evaluate(self):
         pass
 
-    def charger_dists(self):
+    def charger_infos(self):
         charger_infos = []
-        charger_dists = []
         for charger in self.map.chargers.values():
-            # charger_infos.append([(self.map.get_distance(self.boat.location, charger)), charger])
             charger_infos.append(self.dijk.run(self.boat.location.get_id(), charger.get_id()))
         # charger_infos = sorted(charger_infos, key=self.sortkey0, reverse=True)
-        for i in range(len(charger_infos)):
-            charger_dists.append(charger_infos[i][0][0])
+        sortd = sorted(charger_infos, key=self.sortkey0, reverse=False)
+        return sortd
+
+    def charger_info_to_dists(self, info):
+        charger_dists = []
+        for i in range(len(info)):
+            charger_dists.append(info[i][0][0])
         return charger_dists
 
     def take(self):
         strat = self.move_strategy.closest_neighbor
         #strat = self.move_strategy.max_reward
+        start_restrictions = False
+        passenger_restrictions = None
+        planned_to_charge_at = None
+        charge_now = False
         while self.map.demand_left():
+            # DO
+            dropoff = self.sim.env.process(self.boat.dropoff())
+            yield dropoff
+
             # if self.boat.idle:
             self.update_vals()
-
-            # CHARGER DISTANCES
-            charger_dists = self.charger_dists()
-            print(charger_dists)
-
+            if passenger_restrictions != None:
+                passenger_restrictions = passenger_restrictions[1:]
+            loop_size = self.dijk.run(self.boat.location.id, self.boat.location.id)[0][0]
+            # POSSIBLE-CHARGERS-EVALUATION
+            charger_infos = self.charger_infos()
             # BOOLEANS
             at_charger = type(self.boat.location) == Network.Charger
             bat_low = self.boat.battery < 30
-            can_postpone = False
-            for charger in charger_dists:
-                if charger*self.boat.consumption < self.boat.battery:
-                    can_postpone = True
-            #
+            pass_dests = self.boat.get_passenger_destinations()
+            # keep if reachable and can drop passengers on the way
+            doable_distant_chargers = []
+            for charger_info in charger_infos:
+                if self.boat.battery > charger_info[0][0]*self.boat.consumption:
+                    if all(pas_des in charger_info[1:] for pas_des in pass_dests):
+                        doable_distant_chargers.append(charger_info)
+            cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) * self.boat.consumption
+            if self.boat.location.id == planned_to_charge_at:
+                charge_now = True
+            elif at_charger and len(doable_distant_chargers)==0:
+                charge_now = True
+            elif (not at_charger) and cannot_loop:
+                start_restrictions = True
+                planned_to_charge_at = doable_distant_chargers[-1][-1]
+                passenger_restrictions = doable_distant_chargers[-1][2:]
+            if charge_now: #and planned_to_charge_at == self.boat.location.id:
+                #if start_restrictions:
+                    if len(self.boat.passengers)>0:
+                        print("PROBLEM CHARGE: charging with passengers")
+                    charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
+                    charge_now = False
+                    planned_to_charge_at = None
+                    start_restrictions = False
+                    passenger_restrictions = None
+                    yield charged
+            else:
+                if len(charger_infos) == 0:
+                    print("ERROR PLANNING: Big Problem. Will sink.")
 
-            # URGENT CHARGING, CANT POSTPONE
-            if bat_low and at_charger and not can_postpone:
-                if len(self.boat.passengers)>0:
-                    print("PROBLEM CHARGE: charging with passengers")
-                charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
-                yield charged
 
+            # PU
+            if start_restrictions:
+                pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
+            else:
+                pickup = self.sim.env.process(self.boat.pickup())
+            yield pickup
             # REGULAR DRIVE
             next_station = strat(self.map, self.boat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive
+
+
+
             # else: next station
             #return next_station
 
