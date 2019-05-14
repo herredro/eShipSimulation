@@ -3,6 +3,7 @@ from colorama import Fore, Back, Style
 import Global as G
 import Algorithms.Dijkstra
 import Passengers
+from Stats import Stats_Station
 import logging
 import simpy
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
@@ -12,11 +13,13 @@ import simpy
 # Class for basic Station (i.e. not a charger)
 class Station:
     # Station knows its adjacent stations and boats that are present
-    def __init__(self, id):
+    def __init__(self, id, sim):
         self.id = id
+        self.sim = sim
         self.adjacent = {}
         self.boats = []
         self.demand = 0
+        #self.stats = Stats_Station(self)
 
     # Method to add an adjacent station
     def add_neighbor(self, neighbor, weight=0):
@@ -122,16 +125,16 @@ class Station:
 class Charger(Station):
 
     # Charger is subclass of Vertex with additional charging functionality
-    def __init__(self, id, env):
+    def __init__(self, id, sim):
         # Necessary Vertex inits
-        super().__init__(id)
-        self.env = env
+        super().__init__(id, sim)
+        self.env = sim.env
         # Charger inits:
         # means the charging spot at this station is occupied by "None/BoatX"
         self.occupiedBy = None
         # counting all energy that charger transfered to boats
         self.energyConsumed = 0
-        self.resource = simpy.Resource(env, capacity=1)
+        self.resource = simpy.Resource(self.env, capacity=1)
 
     # Boat can be at Charger but since Charger is a Station too, serve() needs to be called to process charging
     def serve(self, boat, chargeNeeded):
@@ -141,6 +144,8 @@ class Charger(Station):
             if G.d_charge:
                 print(Fore.BLACK + Back.LIGHTYELLOW_EX + "%s:\t%s\tCHARGE START @%s" % (self.env.now, str(boat), str(self)), end='')
                 print(Style.RESET_ALL)
+            self.sim.map.stats.usage_in_time[self][self.env.now-1] = 0
+            self.sim.map.stats.usage_in_time[self][self.env.now] = 1
             self.dock(boat)
             oldbat = boat.get_battery()
             if (self.occupiedBy == None):
@@ -156,12 +161,15 @@ class Charger(Station):
                 # else:
                 #     self.env.process(boat.charge(chargeNeeded))
                 self.energyConsumed += chargeNeeded
+                self.sim.map.stats.energy_supplied[self]+=chargeNeeded
                 yield charge
                 new_battery = boat.get_battery()
                 if G.d_charge:
                     print(Fore.BLACK + Back.YELLOW + "%s:\t%s\tCHARGE STOP  @%s (%d%%-%d%%)" % (self.env.now, str(boat), str(self), current_bat, new_battery), end='')
                     print(Style.RESET_ALL)
                 self.undock()
+                self.sim.map.stats.usage_in_time[self][self.env.now - 1] = 1
+                self.sim.map.stats.usage_in_time[self][self.env.now] = 0
             else:
                 print("ERROR CHARGER: Charger already occupied")
 
@@ -201,6 +209,13 @@ class Graph:
         self.num_chargers = 0
         self.dijk = Algorithms.Dijkstra.Dijk(self)
 
+
+        self.create_map()
+        self.init_demand()
+        self.generate_initial_demands(G.initial_demand)
+        self.stats = Stats_Station(self)
+
+
     def demand_left(self):
         for station in self.stations.values():
             if station.get_demand() > 0:
@@ -209,7 +224,7 @@ class Graph:
 
 
     # Todo Demand: needs to be drawn from distribution
-    def create_inital_map(self, edgeList=G.edgeList):
+    def create_map(self, edgeList=G.edgeList):
         for i in edgeList:
             try:
                 if i[3] == 1:
@@ -221,18 +236,23 @@ class Graph:
         # Todo Stations are sorted by edge-creation, not by actual station number
         self.printedges_tabulate()
 
-    def add_initial_demand(self):
-        stationkeys = []
+    def init_demand(self):
+        self.stationkeys = []
         for stationkey in self.stations.keys():
-            stationkeys.append(stationkey)
+            self.stationkeys.append(stationkey)
         for station in self.stations.values():
-            station.init_demand(Passengers.Passengers(self, stationkeys))
+            station.init_demand(Passengers.Passengers(self, station, self.stationkeys))
 
     def generate_initial_demands(self, num):
         i = 0
         for station in self.stations.values():
             station.passengers.add_multiple_demand(num[i], arrivaltime=self.env.now)
             i+=1
+
+    def demand_update(self):
+        for station in self.stations.values(): pass
+
+
 
     def __iter__(self):
         return iter(self.stations.values())
@@ -247,14 +267,14 @@ class Graph:
     #Todo Maybe: move to Controller?
     def add_station(self, node):
         self.num_stations = self.num_stations + 1
-        new_vertex = Station(node)
+        new_vertex = Station(node, self.sim)
         self.stations[node] = new_vertex
         return new_vertex
 
     def add_charger(self, node):
         # Charger is not a vertex
         #self.num_vertices = self.num_vertices + 1
-        new_charger = Charger(node, self.env)
+        new_charger = Charger(node, self.sim)
         self.stations[node] = new_charger
         self.chargers[node] = new_charger
         return new_charger
