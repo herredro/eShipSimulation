@@ -22,7 +22,7 @@ class Boat:
         self.battery= battery
         self.consumption = consumption
         self.idle = True
-        self.stats = Stats.Stats(self)
+        self.stats = Stats.Stats_Boat(self)
         self.strat = Strat.Decision(sim, self)
         self.stats.droveto[0]=location.id
         self.sim.env.process(self.strat.take())
@@ -103,7 +103,7 @@ class Boat:
                 print(Style.RESET_ALL)
         else:
             if G.debug_passenger:
-                print(Fore.BLACK + Back.CYAN + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
                 print(Style.RESET_ALL)
 
     def pickup_any(self, amount):
