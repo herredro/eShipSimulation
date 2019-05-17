@@ -220,7 +220,6 @@ class Boats:
         # Choice: Charge.
         elif choice == "e":
             if type(boat.get_location()) == Net.Charger:
-                # Todo charge max
                 duration = input("How long should boat charge? (type 'max' for full charge)")
                 if duration == "max":
                     boat.get_location().serve(boat, -1)
