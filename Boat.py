@@ -1,99 +1,147 @@
 import Global as G
 from Algorithms import Strategies
+from Network import Station
+from colorama import Fore, Back, Style
+import logging
+import Algorithms.Strategies as Strat
+import Stats
+
+
+
 
 
 class Boat:
     # Boat specific variables
-    def __init__(self, sim, id, location, battery = 100, capacity = 10, charging_speed = 1, consumption = 1):
+    def __init__(self, sim, id, location, battery = 100, capacity = 10, charging_speed = 10, consumption = 1):
         self.sim = sim
         self.id = ("B" + str(id))
         self.location = location
         self.capacity = capacity
-        self.occupied = 0
+        self.passengers = []
         self.charging_speed = charging_speed
         self.battery= battery
         self.consumption = consumption
-#        self.dijk = Strategies.Dijkstra(self.sim.map)
+        self.idle = True
+        self.stats = Stats.Stats_Boat(self)
+        self.strat = Strat.Decision(sim, self)
+        self.stats.droveto[0]=location.id
+        self.sim.env.process(self.strat.take())
+
+
+        #self.dijk = Strategies.Dijkstra(self.sim.map)
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
-    # Method to actually move a boat to a given station
+
     def drive(self, stop):
-        old_loc = self.get_location()
-        new_loc = stop
-        # check if edge to new_loc is existing
-        # Todo Implement: Path should exist even though there is no direct edge
-        if old_loc.isConnectedTo(new_loc):
-            distance = old_loc.get_distance(new_loc)
-            bat = self.get_battery()
-            # Check if battery sufficient. If yes: move.
+        #while True:
+            # self.sim.cb.printtime()
+            # self.sim.cb.printboatlist()
+            # self.sim.map.printmapstate()
+            self.idle = 0
+            self.old_loc = self.get_location()
+            if type(stop) == int:
+                self.new_loc = self.sim.map.get_station_object(stop)
+            else: self.new_loc = stop
+            distance = self.sim.map.get_distance(self.old_loc, self.new_loc)
             if self.drivable__battery(distance):
-                # move
-                self.get_location().remove_visitor(self)
+                self.old_loc.remove_visitor(self)
+                self.set_location(self.new_loc)
                 self.discharge(distance)
-                #Todo Simpy: self.sim.env.timeout(distance)
-                new_loc.add_visitor(self)
-                self.set_location(new_loc)
-                if G.debug: print("--> Boat %s drove to Station %s. Battery at %s\n" % (
-                self.get_id(), self.get_location(), self.get_battery()))
-                return True
+                logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
+                print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s\tDRIVING\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Style.RESET_ALL)
+                yield self.sim.env.timeout(distance)
+                self.idle = 1
+                logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
+                print(Fore.BLACK + Back.GREEN + "%s:\t%s\tarrived\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Style.RESET_ALL)
+                self.stats.droveto[self.sim.env.now] = self.new_loc.id
+                self.new_loc.add_visitor(self)
+                self.dropoff()
+                self.pickup(self.capacity)
+                #yield self.sim.env.process(self.pickup(10))
+                #yield self.sim.env.process(self.dropoff(10))
+                return distance
             else:
                 print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
                 return False
-        else:
-            path = self.sim.map.dijk.run(old_loc.get_id(), new_loc.get_id())
-            if path == 0:
-                print("WARNING dijk:\t%s staying at same place"%str(self))
-                return False
-            print("WARN. Drive():\tno direct path. Jumping with:", path)
-            if type(path)==list:
-                if self.drivable__battery(path[0][0]):
-                    for nextS in path[2:]:
-                        self.drive(self.sim.map.get_station_object(nextS))
-                        return True
-                else: print("ERROR Battery:\tNot enough for desired path")
 
-    def pickup(self, amount):
-        if self.location.demand > 0:
-            space_left = self.capacity - self.occupied
-            if amount == 'max':
-                if self.location.demand >= space_left:
-                    self.occupied = self.capacity
-                    self.location.demand -= space_left
-                elif self.location.demand < space_left:
-                    self.occupied = self.location.demand
-                    self.location.demand = 0
-            #Todo implement more pickups
+    def charge(self, charge_needed):
+        #Todo Charge: implement 100 max
+        self.idle = 0
+        time = int(charge_needed / self.charging_speed)
+        yield self.sim.env.timeout(time)
+        self.battery = self.battery + charge_needed
+        self.idle = 1
+
+    def pickup(self, amount=None, restrictions=None):
+        if self.location.get_demand() > 0:
+
+
+            #Todo implement restrictions
+            before = len(self.passengers)
+            space_left = self.capacity - len(self.passengers)
+            to_be_pickedup = self.strat.pickup_priorities(restrictions)
+            #more, i, new_pas = True, 0, None
+            new_pas, i = [], 0
+            while len(new_pas) < space_left:
+                try:
+                    new_pas.extend(self.location.get_demand_to(to_be_pickedup[i][1], space_left-len(new_pas)))
+                    i+=1
+                except IndexError as e:
+                    print("ERROR PICKUP: Not enough demand: %s" %e)
+                    break
+            for passenger in new_pas:
+                self.passengers.append(passenger)
+            after = len(self.passengers)
+            self.stats.pickedup[self.sim.env.now] = len(new_pas)
+            yield self.sim.env.timeout(0)
+            # Todo Stats: update reward to Statss-Class
+            #Stats.boatreward[self]+=after
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
+                print(Style.RESET_ALL)
+        else:
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
+                print(Style.RESET_ALL)
+
+    def pickup_any(self, amount):
+        if self.location.get_demand() > 0:
+            space_left = self.capacity - len(self.passengers)
+            for passenger in self.location.get_passengers(space_left):
+                self.passengers.append(passenger)
+            if amount > space_left:
+                if G.debug_passenger: print("%s:\t%s PICKED (only) %s at station %s" % (
+                self.sim.env.now, str(self), space_left, str(self.location)))
             else:
-                amount = int(amount)
-                if amount > space_left:
-                    self.occupied = space_left
-                    self.location.demand -= space_left
-                    print("Picked up (only) %s" %space_left)
-                else:
-                    self.occupied += amount
-                    self.location.demand -= amount
-        else: print("WARNING Pickup:\t%s has nothing to pick up at %s" % (str(self), str(self.location)))
-
-    def dropoff(self, amount):
-        if self.occupied > 0:
-            if amount == 'max':
-                self.occupied = 0
-                print("ACTION Dropoff:\t%s dropped of %s passengers" % (str(self), self.occupied))
-            elif int(amount) > self.occupied:
-                self.occupied = 0
-                print("WARNING Dropoff:\tonly had %s to drop off (not %s)" %(self.occupied, amount))
-            elif int(amount) <= self.occupied:
-                self.occupied -= int(amount)
-                print("ACTION:\t%s dropped off %s. Left with: %s" % (self, amount, self.occupied))
-        else: print("ERROR Dropoff:\t%s has nothing to drop off" %str(self))
-
-    def charge(self, time):
-        if (self.battery + (time * self.charging_speed)) > 100:
-            self.battery = 100
-            return 100
+                if G.debug_passenger: print(
+                    "%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
         else:
-            self.battery = self.battery + (time * self.charging_speed)
-            return self.battery
+            if G.debug_passenger: print(
+                "%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
+
+    def dropoff(self):
+        tobedropped = []
+        for passenger in self.passengers:
+            if passenger.dest == self.location.get_id():
+                tobedropped.append(passenger)
+        dropped = len(tobedropped)
+        for passenger in tobedropped:
+            self.passengers.remove(passenger)
+        self.stats.droppedoff[self.sim.env.now] = dropped
+        if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s\tDROPPED\t%i\t @%s" % (self.sim.env.now, str(self), dropped, self.location), end='')
+        print(Style.RESET_ALL)
+        yield self.sim.env.timeout(0)
+
+    def get_passenger_destinations(self):
+        destinations = []
+        for passenger in self.passengers:
+            if passenger.dest not in destinations:
+                destinations.append(passenger.dest)
+        return destinations
+
+
 
     # Method to check if distance is doable with battery load
     def drivable__battery(self,  distance):
@@ -112,9 +160,6 @@ class Boat:
 
     def get_battery__print(self):
         print("\t...BATTERY Boat %s: %d%%" % (self.id, self.battery))
-
-    # Boat initializes its charging procedure
-
 
     # Boat looses battery
     def discharge(self, minus):
@@ -137,7 +182,16 @@ class Boat:
             self.id, self.battery, self.charging_speed, self.consumption))
 
     def __str__(self):
-        return str(self.id)
+        if self.idle:
+            return (str(self.id)+" @" + str(self.location))
+        else:
+            return (str(self.id) + " (@" + str(self.location)+")")
+
+    def __str__(self):
+        if self.idle:
+            return "%s:%s" %(str(self.id), str(len(self.passengers)))
+        else:
+            return "%s:%s" % (str(self.id), str(len(self.passengers)))
 
     def __repr__(self):
         return str(self.id)
