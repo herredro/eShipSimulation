@@ -13,22 +13,31 @@ import matplotlib.pyplot as plt
 class Simulation:
     def __init__(self):
         #SimPy #Todo attach process?
+
+        # if G.simpy:             self.simpy()
+        # elif G.ui_choice:       self.ui_choice()
+        # elif G.manual:          self.manual()
+        # else:                   self.strat_pick_drop()
+
+        # for i in range(100):
+        #     self.simpy(i)
+        self.simpy(2)
+        plt.show()
+
+    def simpy(self, numboats):
         self.env = simpy.Environment()
         print(Style.RESET_ALL)
         print("BOAT SIMULATOR\nINITIAL SETTINGS:\n")
         self.map = Map.Graph(self)
         self.strategy = Strategies.Strategies(self.map)
         self.cb = Controller.Boats(self)
-        if G.simpy:             self.simpy()
-        elif G.ui_choice:       self.ui_choice()
-        elif G.manual:          self.manual()
-        else:                   self.strat_pick_drop()
 
-    def simpy(self):
-        self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=1000, cons=0.5)
-        self.cb.new_boat(2, loc=self.map.get_station_object(1), bat=1000, cons=1)
-        self.cb.new_boat(3, loc=self.map.get_station_object(1), bat=1000, cons=2)
-        #self.cb.create_basic_boats(numBoats2create=2, bat=100)
+        self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=100, cons=0.5)
+        self.cb.new_boat(2, loc=self.map.get_station_object(2), bat=100, cons=1)
+        self.cb.new_boat(3, loc=self.map.get_station_object(3), bat=100, cons=2)
+        # self.cb.create_basic_boats(numBoats2create=numboats, bat=100)
+
+        self.map.printmapstate()
 
         self.env.run(until=1000)
         self.cb.printboatlist()
@@ -70,7 +79,7 @@ class Simulation:
         for boat in self.cb.boats.values():
             self.ax2.step(boat.stats.luggage.keys(), boat.stats.luggage.values(), label="Boat %s" % str(boat))
         plt.legend()
-        plt.show()
+
 
     def manual(self):
         self.cb.create_basic_boats(numBoats2create=G.numBoats)

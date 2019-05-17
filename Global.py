@@ -31,7 +31,7 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [20, 30, 40, 90, 110, 130, 150]
+initial_demand = [90, 90, 90, 90, 110, 130, 150]
 
 
 

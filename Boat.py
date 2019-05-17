@@ -103,7 +103,7 @@ class Boat:
                 print(Style.RESET_ALL)
         else:
             if G.debug_passenger:
-                print(Fore.BLACK + Back.CYAN + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
                 print(Style.RESET_ALL)
 
     def pickup_any(self, amount):
