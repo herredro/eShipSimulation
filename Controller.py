@@ -25,9 +25,9 @@ class Boats:
         self.strategy = Strategies.Decision_Union(self.sim)
         for boat in self.boats.values():
             # Anarchy
-            self.sim.env.process(boat.strat.take())
+            #self.sim.env.process(boat.strat.take())
             # Union
-            #self.env.process(self.strategy.take(self.boats[boat.id]))
+            self.env.process(self.strategy.take(self.boats[boat.id]))
 
         self.env.run(until=G.SIMTIME)
 
