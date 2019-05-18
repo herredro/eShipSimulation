@@ -58,6 +58,7 @@ class Decision_Union:
         self.all_stations = []
         self.pass_dest_at_location = {}
         self.pass_dest_boarded = {}
+        self.final_picks = {}
 
         self.passengers_open = []
         self.boat_passenger_scores = {}
@@ -76,6 +77,7 @@ class Decision_Union:
                 self.pass_dest_at_location[station].append([station2])
 
         for boat in self.boats.values():
+            self.final_picks[boat] = []
             self.boat_passenger_scores[boat] = {}
             self.start_restrictions[boat] = False
             self.passenger_restrictions[boat] = None
@@ -133,9 +135,9 @@ class Decision_Union:
         # update boat-passenger scores
         for boat in self.boats.values():
             for passenger in self.passengers_open:
-                self.boat_to_passenger_score_light(passenger, boat)
+                self.passenger_to_boat_score_light(passenger, boat)
 
-    def boat_to_passenger_score_light(self, passenger, boat):
+    def passenger_to_boat_score_light(self, passenger, boat):
         if passenger.dep == boat.location:
             dep_index = -1
         else:
@@ -149,6 +151,7 @@ class Decision_Union:
                                                 self.map.get_station_object(passenger.dest))
         # Todo Check if this gets executed, meaning: there are still passengers with dep=dest...
         self.boat_passenger_scores[boat][passenger] = ((dep_delay + dest_delay) / actual_distance)
+        passenger.set_score(boat, ((dep_delay + dest_delay) / actual_distance))
     # except ValueError as e:
     #     #print("P%s:%s->%s not in %s.route:%s: "
     #     # %(passenger.id, passenger.dep, passenger.dest, str(boat), boat.route))
@@ -215,8 +218,13 @@ class Decision_Union:
         #1 get demand at all stations
         #2 sort by priority
         #3 match demands to all boats
+        self.final_picks[boat] = []
         self.passenger_info()
-        pickup = self.sim.env.process(boat.pickup())
+        for passenger in self.passengers_open:
+            if passenger.dep == boat.location.id:
+                if passenger.get_best_score() == boat:
+                    self.final_picks[boat].append(passenger)
+        pickup = self.sim.env.process(boat.pickup_selection(self.final_picks[boat]))
         yield pickup
 
 

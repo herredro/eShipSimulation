@@ -18,11 +18,22 @@ class Passenger:
         self.dest = dest
         #Todo Simpy: Make passenger Resource
         #self.res = Resource(1)
-
+        self.score = {}
 
     def __str__(self):
         return "P%s:%s->%s"%(self.id, self.dep, self.dest)
 
+    def set_score(self, boat, score):
+        self.score[boat] = score
+
+    def get_best_score(self):
+        best_boat = None
+        best_score = 10*99
+        for boat, score in self.score.items():
+            if score < best_score:
+                best_score = score
+                best_boat = boat
+        return best_boat
 
 class Passengers:
     def __init__(self, map, station, stationkeys, seed = None):

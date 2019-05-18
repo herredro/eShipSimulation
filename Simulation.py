@@ -32,9 +32,9 @@ class Simulation:
         self.strategy = Strategies.Strategies(self.map)
         self.cb = Controller.Boats(self)
 
-        self.cb.new_boat(loc=self.map.get_station_object(1), bat=100, cons=0.5)
-        self.cb.new_boat(loc=self.map.get_station_object(2), bat=100, cons=0.1)
-        self.cb.new_boat(loc=self.map.get_station_object(3), bat=100, cons=0.2)
+        self.cb.new_boat(loc=self.map.get_station_object(1), bat=1000, cons=0.5)
+        self.cb.new_boat(loc=self.map.get_station_object(2), bat=1000, cons=0.1)
+        self.cb.new_boat(loc=self.map.get_station_object(3), bat=1000, cons=0.2)
         for boat in self.cb.boats.values():
             print(boat.id +" Route: ", end="")
             print(boat.route)

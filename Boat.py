@@ -52,8 +52,6 @@ class Boat:
             time_needed += self.sim.map.get_distance(self.sim.map.get_station_object(self.route[-2]), self.sim.map.get_station_object(self.route[-1]))
         self.route.pop(0)
 
-
-
     def drive(self, stop):
         #while True:
             # self.sim.cb.printtime()
@@ -125,6 +123,20 @@ class Boat:
             if G.debug_passenger:
                 print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
                 print(Style.RESET_ALL)
+
+    def pickup_selection(self, list):
+        had = len(self.passengers)
+        got = 0
+        for passenger in list:
+            if len(self.passengers) < self.capacity:
+                self.passengers.append(passenger)
+                self.location.passengers.passengers.remove(passenger)
+                got +=1
+        yield self.sim.env.timeout(0)
+        if G.debug_passenger:
+            print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s\tPICKED\t%s\t @%s (had:%s, now:%s)" % (
+            self.sim.env.now, str(self), got, str(self.location), had, len(self.passengers)), end='')
+            print(Style.RESET_ALL)
 
     def drive_time_index(self, frm, to):
         if to == -1:
