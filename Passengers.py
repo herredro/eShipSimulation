@@ -7,17 +7,21 @@ np.random.seed(123)
 import Global as G
 
 class Passenger:
-    def __init__(self, arrivaltime, dest):
+    count = 0
+    def __init__(self, arrivaltime, dep, dest):
+        Passenger.count +=1
+        self.id = Passenger.count
         self.arrivaltime = arrivaltime
         # Todo metrics record waiting time
         self.time_processed = -10000
+        self.dep = dep
         self.dest = dest
         #Todo Simpy: Make passenger Resource
         #self.res = Resource(1)
 
 
     def __str__(self):
-        return "P->%s"%self.dest
+        return "P%s:%s->%s"%(self.id, self.dep, self.dest)
 
 
 class Passengers:
@@ -25,21 +29,21 @@ class Passengers:
         #Todo set seed
         #Todo changed for map-input. Need sim-input?
         self.map = map
-        self.station = station
+        self.station = station.id
         #Todo List of all Stations (int)
         self.passengers = []
         self.stationkeys = stationkeys
         self.arrival_expect = random.randint(0, G.MAX_ARRIVAL_EXPECT)
-        self.map.env.process(self.update_poisson())
+        #self.map.env.process(self.update_poisson())
 
 
     def new(self, arrivaltime=None, dest=None):
         if arrivaltime == None:
             arrivaltime = self.map.env.now
-        rand_station = random.randint(0, len(self.stationkeys) - 1)
-        if dest == None:
+        while dest == None or dest == self.station:
+            rand_station = random.randint(0, len(self.stationkeys) - 1)
             dest = self.stationkeys[rand_station]
-        new_passenger = Passenger(arrivaltime, dest)
+        new_passenger = Passenger(arrivaltime, self.station, dest)
         self.passengers.append(new_passenger)
 
     def add_multiple_demand(self, amount=1, arrivaltime=0):

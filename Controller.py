@@ -19,15 +19,30 @@ class Boats:
         self.env = sim.env
         self.numBoats = 0
         self.boats = {}
-        self.move_strategy = Strategies.Strategies(self.map)
+        self.map_strategy = Strategies.Strategies(self.map)
+
+    def start_driving(self):
+        self.strategy = Strategies.Decision_Union(self.sim)
+        for boat in self.boats.values():
+            # Anarchy
+            self.sim.env.process(boat.strat.take())
+            # Union
+            #self.env.process(self.strategy.take(self.boats[boat.id]))
+
+        self.env.run(until=G.SIMTIME)
+
+
+
+
+
 
     # Creates a Boat and adds to boat dict.
-    def new_boat(self, id, loc=G.locaction, bat=G.battery, chsp=G.chargingspeed, cons=G.consumption):
+    def new_boat(self, loc=G.locaction, bat=G.battery, chsp=G.chargingspeed, cons=G.consumption):
         # default location -1 means to position boat at start-vertex
         if loc == -1:
             loc = self.map.get_station_object(G.startVertex)
-        boat = Boat.Boat(self.sim, id, loc, battery=bat, charging_speed=chsp, consumption=cons)
-        self.boats[id] = boat
+        boat = Boat.Boat(self.sim, loc, battery=bat, charging_speed=chsp, consumption=cons)
+        self.boats[boat.id] = boat
         # location needs to know it has new visitor
         loc.add_visitor(boat)
         self.numBoats += 1
@@ -35,7 +50,7 @@ class Boats:
     # Method to create several basic boats at once
     def create_basic_boats(self, numBoats2create=G.numBoats, bat= 100):
         for i in range(self.numBoats+1, self.numBoats+numBoats2create+1):
-            boat = Boat.Boat(self.sim, id=(str(i)), location=self.map.get_station_object(1), battery=bat)
+            boat = Boat.Boat(self.sim, location=self.map.get_station_object(1), battery=bat)
             self.boats[i] = boat
             self.map.get_station_object(1).add_visitor(boat)
             self.numBoats = self.numBoats + 1
@@ -100,28 +115,6 @@ class Boats:
         if self.env.peek() == self.env.now:
             self.env.step()
         self.sp_ui_fleet_destination()
-
-    def sp_fleet_move_algo(self, strategy=None):
-
-        #while self.map.demand_left():
-            # self.printtime()
-            # self.printboatlist()
-            # self.map.printmapstate()
-
-        val = self.env.process(gen)
-        print(val)
-
-                #yield boat
-                #self.env.process(self.decision.take(boat))
-                #next_decision = self.decision.take(boat)
-                #next_station = strategy(self.map, boat)
-                #self.env.process(next_decision)
-                #self.env.process()
-        self.env.run()
-        print("FINAL")
-        self.printtime()
-        self.printboatlist()
-        self.map.printmapstate()
 
 
     # Prints list of boats including their specs

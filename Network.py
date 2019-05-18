@@ -240,6 +240,7 @@ class Graph:
         self.stationkeys = []
         for stationkey in self.stations.keys():
             self.stationkeys.append(stationkey)
+
         for station in self.stations.values():
             station.init_demand(Passengers.Passengers(self, station, self.stationkeys))
 
@@ -332,7 +333,10 @@ class Graph:
             boatlist = self.stations[stationnum].get_visitors()
             boatshere = []
             for boat in boatlist:
-                boatshere.append("%s" %(boat))
+                if boat.idle:
+                    boatshere.append("(%s)" %(boat))
+                else:
+                    boatshere.append("%s" %(boat))
             boats.append(boatshere)
         total.append(stationnames)
         total.append(boats)

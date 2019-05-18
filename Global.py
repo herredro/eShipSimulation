@@ -8,6 +8,8 @@ battery=100
 chargingspeed=10
 consumption=1
 
+SIMTIME = 1000
+
 MAX_ARRIVAL_EXPECT = 5
 INTERARRIVALTIME = 10
 
@@ -31,7 +33,7 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [90, 90, 90, 90, 110, 130, 150]
+initial_demand = [5, 5, 5, 90, 110, 130, 150]
 
 
 

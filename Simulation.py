@@ -1,11 +1,11 @@
 import simpy
 import Controller as Controller
 import Network as Map
-import Passengers
+
 import Global as G
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
-import Stats
+
 import matplotlib.pyplot as plt
 
 
@@ -22,7 +22,7 @@ class Simulation:
         # for i in range(100):
         #     self.simpy(i)
         self.simpy(2)
-        plt.show()
+        #plt.show()
 
     def simpy(self, numboats):
         self.env = simpy.Environment()
@@ -32,20 +32,26 @@ class Simulation:
         self.strategy = Strategies.Strategies(self.map)
         self.cb = Controller.Boats(self)
 
-        self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=100, cons=0.5)
-        self.cb.new_boat(2, loc=self.map.get_station_object(2), bat=100, cons=1)
-        self.cb.new_boat(3, loc=self.map.get_station_object(3), bat=100, cons=2)
+        self.cb.new_boat(loc=self.map.get_station_object(1), bat=100, cons=0.5)
+        self.cb.new_boat(loc=self.map.get_station_object(2), bat=100, cons=0.1)
+        self.cb.new_boat(loc=self.map.get_station_object(3), bat=100, cons=0.2)
+        for boat in self.cb.boats.values():
+            print(boat.id +" Route: ", end="")
+            print(boat.route)
+        #self.cb.new_boat(loc=self.map.get_station_object(3), bat=100, cons=2)
         # self.cb.create_basic_boats(numBoats2create=numboats, bat=100)
+        self.cb.start_driving()
 
         self.map.printmapstate()
 
-        self.env.run(until=1000)
-        self.cb.printboatlist()
-        self.map.printmapstate()
 
-        self.visualization_stations()
-
-        self.visualization_boats()
+        #self.env.run(until=G.SIMTIME)
+        # self.cb.printboatlist()
+        # self.map.printmapstate()
+        #
+        # self.visualization_stations()
+        #
+        # self.visualization_boats()
 
 
         # boat = self.cb.boats[1]
@@ -56,29 +62,29 @@ class Simulation:
         # boat.stats.save_dict(boat.stats.droveto)
         # boat.stats.open_dict("data.txt")
 
-    def visualization_stations(self):
-        # STATIONS
-        # for station in self.map.get_all_stations():
-        #     self.map.stats.plot_step([self.map.stats.usage_in_time[station]])
-        print("STATS STATIONS")
-
-        for station in self.map.stats.energy_supplied:
-            print("%s supplied %i units" %(str(station), self.map.stats.energy_supplied[station]))
-
-        self.fig, self.ax = plt.subplots()
-        plt.title("Stations")
-        for station in self.map.stats.usage_in_time:
-            self.ax.step(self.map.stats.usage_in_time[station].keys(), self.map.stats.usage_in_time[station].values(), label="Station %s"%str(station))
-        plt.legend()
-
-
-    def visualization_boats(self):
-        print("Boat passengers")
-        self.fig2, self.ax2 = plt.subplots()
-        plt.title("BOATS")
-        for boat in self.cb.boats.values():
-            self.ax2.step(boat.stats.luggage.keys(), boat.stats.luggage.values(), label="Boat %s" % str(boat))
-        plt.legend()
+    # def visualization_stations(self):
+    #     # STATIONS
+    #     # for station in self.map.get_all_stations():
+    #     #     self.map.stats.plot_step([self.map.stats.usage_in_time[station]])
+    #     print("STATS STATIONS")
+    #
+    #     for station in self.map.stats.energy_supplied:
+    #         print("%s supplied %i units" %(str(station), self.map.stats.energy_supplied[station]))
+    #
+    #     self.fig, self.ax = plt.subplots()
+    #     plt.title("Stations")
+    #     for station in self.map.stats.usage_in_time:
+    #         self.ax.step(self.map.stats.usage_in_time[station].keys(), self.map.stats.usage_in_time[station].values(), label="Station %s"%str(station))
+    #     plt.legend()
+    #
+    #
+    # def visualization_boats(self):
+    #     print("Boat passengers")
+    #     self.fig2, self.ax2 = plt.subplots()
+    #     plt.title("BOATS")
+    #     for boat in self.cb.boats.values():
+    #         self.ax2.step(boat.stats.luggage.keys(), boat.stats.luggage.values(), label="Boat %s" % str(boat))
+    #     plt.legend()
 
 
     def manual(self):
