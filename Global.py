@@ -1,6 +1,7 @@
 import logging
-logging.basicConfig(level=logging.INFO, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
+logging.basicConfig(level=logging.ERROR, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
 log_pickdrop = logging.getLogger("Pick/Drop")
+log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
 locaction=-1
@@ -33,7 +34,8 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [50, 50, 50, 90, 110, 130, 150]
+initial_demand = [450, 440, 420, 90, 110, 130, 150]
+#initial_demand = [0,0,0,0,0]
 
 
 

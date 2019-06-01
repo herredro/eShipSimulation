@@ -1,12 +1,14 @@
 import simpy
 import Controller as Controller
 import Network as Map
-
+import Stats
 import Global as G
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
-
+import Boat
 import matplotlib.pyplot as plt
+
+
 
 
 
@@ -21,46 +23,82 @@ class Simulation:
 
         # for i in range(100):
         #     self.simpy(i)
-        self.simpy(2)
-        #plt.show()
+        data = []
+        data.append(self.simpy(False))
+        data.append(self.simpy(True))
 
-    def simpy(self, numboats):
-        self.env = simpy.Environment()
-        print(Style.RESET_ALL)
-        print("BOAT SIMULATOR\nINITIAL SETTINGS:\n")
-        self.map = Map.Graph(self)
-        self.strategy = Strategies.Strategies(self.map)
-        self.cb = Controller.Boats(self)
-
-        self.cb.new_boat(loc=self.map.get_station_object(1), bat=1000, cons=0.5)
-        self.cb.new_boat(loc=self.map.get_station_object(2), bat=1000, cons=0.1)
-        self.cb.new_boat(loc=self.map.get_station_object(3), bat=1000, cons=0.2)
-        for boat in self.cb.boats.values():
-            print(boat.id +" Route: ", end="")
-            print(boat.route)
-        #self.cb.new_boat(loc=self.map.get_station_object(3), bat=100, cons=2)
-        # self.cb.create_basic_boats(numBoats2create=numboats, bat=100)
-        self.cb.start_driving()
-
-        self.map.printmapstate()
+        #self.show_data(data)
 
 
-        #self.env.run(until=G.SIMTIME)
-        # self.cb.printboatlist()
-        # self.map.printmapstate()
-        #
+        # STATS
+    def show_data(self, stats):
+        print(stats[0].final_demand, stats[1].final_demand)
+        stationsA = list(stats[0].demand_in_time.values())
+        stationsC = list(stats[1].demand_in_time.values())
+        colors = ["blue", "red", "green"]
+        num = 1
+        for station in stationsA:
+            plt.plot(station.keys(), station.values(), label=num, color=colors[num-1])
+            num += 1
+        num = 1
+        for station in stationsC:
+            plt.plot(station.keys(), station.values(), label=num, color=colors[num-1])
+            num += 1
+        plt.legend()
+        plt.show()
+
+    def simpy(self, mode):
+        if not mode:
+            # ANARCHY
+            self.env = simpy.Environment()
+            print(Style.RESET_ALL)
+            print("BOAT SIMULATOR ANARCHY\nINITIAL SETTINGS:\n")
+            self.map = Map.Graph(self)
+            self.strategy = Strategies.Strategies(self.map)
+            self.cb = Controller.Boats(self, mode)
+            self.stats = Stats.Stats_Graph(self.map)
+            self.cb.new_boat(loc=self.map.get_station(1), bat=100, cons=0.5)
+            self.cb.new_boat(loc=self.map.get_station(2), bat=100, cons=0.1)
+            self.cb.new_boat(loc=self.map.get_station(3), bat=100, cons=0.2)
+            for boat in self.cb.boats.values():
+                print(boat.id +" Route: ", end="")
+                print(boat.route)
+            self.cb.start_driving()
+            self.map.printmapstate()
+            demand_state = []
+            for station in self.map.stations.values():
+                demand_state.append(station.get_demand())
+            self.stats.final_demand = demand_state
+        if mode:
+            # CENTRAL CONTROL
+            self.env = simpy.Environment()
+            print(Style.RESET_ALL)
+            print("BOAT SIMULATOR CENTRAL\nINITIAL SETTINGS:\n")
+            self.map = Map.Graph(self)
+            self.strategy = Strategies.Strategies(self.map)
+            self.cb = Controller.Boats(self, mode)
+            self.stats = Stats.Stats_Graph(self.map)
+            self.cb.new_boat(loc=self.map.get_station(1), bat=1000, cons=0.5)
+            self.cb.new_boat(loc=self.map.get_station(2), bat=1000, cons=0.1)
+            self.cb.new_boat(loc=self.map.get_station(3), bat=1000, cons=0.2)
+            for boat in self.cb.boats.values():
+                print(boat.id + " Route: ", end="")
+                print(boat.route)
+            self.cb.start_driving()
+            self.map.printmapstate()
+            demand_state = []
+            for station in self.map.stations.values():
+                demand_state.append(station.get_demand())
+            self.stats.final_demand = demand_state
+        return self.stats
         # self.visualization_stations()
-        #
         # self.visualization_boats()
-
-
         # boat = self.cb.boats[1]
         # plot = boat.stats.plot_free([boat.stats.pickedup, boat.stats.droppedoff])
         # plot.show()
-
-
         # boat.stats.save_dict(boat.stats.droveto)
         # boat.stats.open_dict("data.txt")
+
 
     # def visualization_stations(self):
     #     # STATIONS
