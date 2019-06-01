@@ -4,6 +4,8 @@ import Algorithms.Dijkstra
 import Stats
 import Global as G
 import time
+from colorama import Fore, Back, Style
+import logging
 
 
 class Strategies:
@@ -186,14 +188,40 @@ class Decision_Union:
     def drive(self, boat):
         start = time.time()
         if len(boat.route) > 0:
-            next_station = boat.route.pop(0)
+            stop = boat.route.pop(0)
         else:
             boat.fill_route(simtime=G.SIMTIME*0.1)
-            next_station = boat.route.pop(0)
+            stop = boat.route.pop(0)
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
-        drive = self.sim.env.process(boat.drive(next_station))
-        yield drive
+        boat.idle = 0
+        boat.old_loc = boat.get_location()
+        if type(stop) == int:
+            boat.new_loc = self.sim.map.get_station(stop)
+        else:
+            boat.new_loc = stop
+        # distance = self.sim.map.get_distance(self.old_loc, self.new_loc)
+        distance = self.sim.map.distances[boat.old_loc][boat.new_loc]
+        if boat.drivable__battery(distance):
+            logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
+            print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s   \tDRIVING⚡%i%% @%s" % (
+            self.sim.env.now, str(boat), boat.battery, str(stop)), end='')
+            print(Style.RESET_ALL)
+            boat.old_loc.remove_visitor(boat)
+            boat.set_location(boat.new_loc)
+            boat.discharge(distance)
+            yield self.sim.env.timeout(distance)
+            boat.new_loc.add_visitor(boat)
+            self.idle = 1
+            logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
+            print(Fore.BLACK + Back.GREEN + "%s:\t%s     \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)),
+                  end='')
+            print(Style.RESET_ALL)
+            boat.stats.droveto[self.sim.env.now] = boat.new_loc.id
+            return distance
+        else:
+            print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
+            return False
 
     def dropoff(self, boat):
 
