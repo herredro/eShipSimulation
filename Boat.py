@@ -6,6 +6,7 @@ import logging
 import Algorithms.Strategies as Strat
 import Stats
 import random
+random.seed(123)
 import time
 
 
@@ -17,7 +18,7 @@ class Boat:
     def __init__(self, sim, location, battery = 100, capacity = 10, charging_speed = 10, consumption = 1):
         Boat.count+=1
         self.sim = sim
-        self.id = ("B" + str(Boat.count))
+        self.id = (Boat.count)
         self.location = location
         self.capacity = capacity
         self.passengers = []
@@ -31,14 +32,14 @@ class Boat:
         self.stats.droveto[0]=location.id
         #Todo Route: Decrease with drive
         self.route = [location.id]
-        self.fill_route(simtime=G.SIMTIME)
+        self.fill_route_length()
         #self.sim.env.process(self.strat.take())
 
 
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
     #Todo route: Fill up when empty
-    def fill_route(self, simtime=G.SIMTIME):
+    def fill_route_time(self, simtime=G.SIMTIME):
         simtime *= 1.1
         time_needed = 0
         stations = []
@@ -52,6 +53,18 @@ class Boat:
             #time_needed += self.sim.map.get_distance(self.sim.map.get_station_object(self.route[-2]), self.sim.map.get_station_object(self.route[-1]))
             time_needed += self.sim.map.distances[self.sim.map.get_station(self.route[-2])][self.sim.map.get_station(self.route[-1])]
         self.route.pop(0)
+
+    def fill_route_length(self):
+        stations = []
+        for station in self.sim.map.stations.values():
+            stations.append(station.id)
+        for i in range(G.ROUTE_LENGHT):
+            random_station = random.randint(0, len(stations)-1)
+            while stations[random_station] == self.route[-1]:
+                random_station = random.randint(0, len(stations) - 1)
+            self.route.append(stations[random_station])
+        #self.route.pop(0)
+
 
     def drive(self, stop):
         #while True:
@@ -76,7 +89,7 @@ class Boat:
                 self.new_loc.add_visitor(self)
                 self.idle = 1
                 logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
-                print(Fore.BLACK + Back.GREEN + "%s:\t%s     \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
+                print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
                 self.stats.droveto[self.sim.env.now] = self.new_loc.id
                 #yield self.sim.env.process(self.pickup(10))
@@ -115,7 +128,7 @@ class Boat:
                 self.passengers.append(passenger)
             after = len(self.passengers)
             self.stats.pickedup[self.sim.env.now] = len(new_pas)
-            yield self.sim.env.timeout(0)
+            yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
             # Todo Stats: update reward to Statss-Class
             #Stats.boatreward[self]+=after
             if G.debug_passenger:
@@ -134,7 +147,7 @@ class Boat:
                 self.passengers.append(passenger)
                 self.location.passengers.passengers.remove(passenger)
                 got +=1
-        yield self.sim.env.timeout(0)
+        yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
         if G.debug_passenger:
             print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (had:%s, now:%s)" % (
             self.sim.env.now, str(self), got, str(self.location), had, len(self.passengers)), end='')
@@ -155,9 +168,8 @@ class Boat:
 
         return distance
 
-    def drive_time(self, frm, to):
+    def wait_time(self, frm, to):
         time_wait = 0
-        time_driv = 0
         if frm in self.route:
             dep_index = self.route.index(frm)
             if to in self.route[dep_index:]:
@@ -170,9 +182,26 @@ class Boat:
             return 10*99
         for i in range(1, dep_index):
             time_wait += self.sim.map.distances[self.sim.map.get_station(self.route[i - 1])][self.sim.map.get_station(self.route[i])]
+        return time_wait
+
+    def drive_time(self, frm, to):
+        time_driv = 0
+        if frm in self.route:
+            dep_index = self.route.index(frm)
+            if to in self.route[dep_index:]:
+                dest_index = dep_index + self.route[dep_index:].index(to)
+            else:
+                #print("DESTINATION NOT IN ROUTEssjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsj")
+                return 10*99
+        else:
+            #print("DEPARTURE NOT IN ROUTEssjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsj")
+            return 10*99
         for i in range(dep_index+1, dest_index):
             time_driv += self.sim.map.distances[self.sim.map.get_station(self.route[dep_index-1])][self.sim.map.get_station(self.route[dest_index])]
-        return time_wait + time_driv
+        return time_driv
+
+    def drive_wait_time(self, frm, to):
+        return self.drive_time(frm, to) + self.wait_time(frm, to)
 
     def drive_stops(self, passenger_loc):
         if passenger_loc in self.route:
@@ -235,6 +264,12 @@ class Boat:
         if (self.get_battery() - (distance * self.get_consumption())) > 0: return True
         else: return False
 
+    def drivable(self, frm, to):
+        if self.drivable__battery(self.drive_wait_time(frm, to)):
+            return True
+        else:
+            return False
+
     def set_location(self, loc):
         self.location = loc
 
@@ -276,9 +311,9 @@ class Boat:
 
     def __str__(self):
         if self.idle:
-            return "%s:%s@%s" %(str(self.id), str(len(self.passengers)), self.location)
+            return "B" + "%s:%s@%s" % (str(self.id), str(len(self.passengers)), self.location)
         else:
-            return "%s:%s@%s" %(str(self.id), self.location, str(len(self.passengers)))
+            return "B" + "%s:%s@%s" % (str(self.id), str(len(self.passengers)), self.location)
 
     def __repr__(self):
-        return str(self.id)
+        return "B" + str(self.id)

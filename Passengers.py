@@ -44,7 +44,7 @@ class Passengers:
         #Todo List of all Stations (int)
         self.passengers = []
         self.stationkeys = stationkeys
-        self.arrival_expect = random.randint(0, G.MAX_ARRIVAL_EXPECT)
+        self.arrival_expect = random.randint(1, G.MAX_ARRIVAL_EXPECT)
         #self.map.env.process(self.update_poisson())
 
 
@@ -62,14 +62,20 @@ class Passengers:
             self.new(arrivaltime=arrivaltime)
 
     def update_poisson(self):
+        print("SUCCESS POISSON INIT STATION %i" %self.station)
+        turn = 1
         while True:
             old = len(self.passengers)
             pois = np.random.poisson(self.arrival_expect)
+            pois = np.random.poisson(G.poisson_arrivals_expected[self.station])
+            pois = G.poisson_arrivals[self.station-1][turn]
+            self.map.sim.stats.poisson_value[self.map.get_station(self.station)][self.map.env.now] = pois
             for i in range(pois):
                 self.new()
             new = len(self.passengers)
             yield self.map.env.timeout(G.INTERARRIVALTIME)
-            print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
+            #print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
+            turn += 1
 
 
 

@@ -1,6 +1,7 @@
 import Network as Net
 import Boat as Boat
 from Algorithms import Strategies as Strategies
+import Stats
 
 import Global as G
 from tabulate import tabulate
@@ -12,7 +13,7 @@ from colorama import Fore, Back, Style
 
 class Boats:
     # Boat Controller has map, number of boats, boats themselves as dictionary
-    def __init__(self, sim, mode):
+    def __init__(self, sim, mode, num=G.NUM_BOATS):
         self.sim = sim
         self.map = sim.map
         self.env = sim.env
@@ -21,6 +22,7 @@ class Boats:
         self.boats = {}
         self.map_strategy = Strategies.Strategies(self.map)
         Boat.Boat.count = 0
+        self.create_basic_boats(num)
 
     def start_driving(self):
         if not self.mode:
@@ -40,7 +42,7 @@ class Boats:
 
 
     # Creates a Boat and adds to boat dict.
-    def new_boat(self, loc=G.locaction, bat=G.battery, chsp=G.chargingspeed, cons=G.consumption):
+    def new_boat(self, loc=G.locaction, bat=G.BATTERY, chsp=G.chargingspeed, cons=G.consumption):
         # default location -1 means to position boat at start-vertex
         if loc == -1:
             loc = self.map.get_station(G.startVertex)
@@ -51,7 +53,7 @@ class Boats:
         self.numBoats += 1
 
     # Method to create several basic boats at once
-    def create_basic_boats(self, numBoats2create=G.numBoats, bat= 100):
+    def create_basic_boats(self, numBoats2create, bat= G.BATTERY):
         for i in range(self.numBoats+1, self.numBoats+numBoats2create+1):
             boat = Boat.Boat(self.sim, location=self.map.get_station(1), battery=bat)
             self.boats[i] = boat

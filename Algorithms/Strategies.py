@@ -55,6 +55,9 @@ class Decision_Union:
         self.map = sim.map
         self.boats = self.sim.cb.boats
         self.dijk = Algorithms.Dijkstra.Dijk(self.map)
+        self.stats = Stats.Stats_Boat(self.boats)
+
+        print(1)
 
         self.all_stations = []
         self.pass_dest_at_location = {}
@@ -68,6 +71,101 @@ class Decision_Union:
         self.planned_to_charge_at = {}
         self.charge_now = {}
         self.init_vals()
+
+
+    def take(self, boat):
+        while True:
+
+            yield self.sim.env.process(self.dropoff(boat))
+
+            yield self.sim.env.process(self.charge(boat))
+
+            yield self.sim.env.process(self.pickup(boat))
+
+            yield self.sim.env.process(self.drive(boat))
+
+
+
+
+    def charge(self, boat):
+        start = time.time()
+        # if self.boat.idle:
+        self.update_vals(boat)
+        if self.start_restrictions[boat]:
+            self.passenger_restrictions[boat] = self.passenger_restrictions[boat][1:]
+            #self.passenger_restrictions[boat] = self.passenger_restrictions[boat][1:]
+        # POSSIBLE-CHARGERS-EVALUATION
+        charger_infos = self.charger_infos(boat)
+        pass_dests = boat.get_passenger_destinations()
+        # keep if reachable and can drop passengers on the way
+        doable_distant_chargers = []
+        for charger_info in charger_infos:
+            if boat.battery > charger_info[0] * boat.consumption:
+                if all(pas_des in charger_info[1] for pas_des in pass_dests):
+                    doable_distant_chargers.append(charger_info)
+                    if len(doable_distant_chargers) > 3:
+                        break
+            else: break
+        if len(doable_distant_chargers) == 1:
+            self.planned_to_charge_at[boat] = doable_distant_chargers[0][1][-1]
+            self.start_restrictions[boat] = True
+            self.passenger_restrictions[boat] = doable_distant_chargers[0][1]
+        if len(doable_distant_chargers) == 0 and type(boat.location) == Network.Charger:
+            self.charge_now[boat] = True
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("CH:%s:\t%i" % (boat.id, took))
+        if self.charge_now[boat]:
+            # if start_restrictions:
+            if len(boat.passengers) > 0:
+                print("PROBLEM CHARGE: charging with passengers")
+            charged = self.sim.env.process(boat.get_location().serve(boat, G.BATTERY))
+            self.charge_now[boat] = False
+            self.planned_to_charge_at[boat] = None
+            self.start_restrictions[boat] = False
+            self.passenger_restrictions[boat] = None
+            yield charged
+        else:
+            if len(charger_infos) == 0:
+                print("ERROR PLANNING: Big Problem. Will sink.")
+
+    def drive(self, boat):
+        next_station = None
+        start = time.time()
+        if len(boat.route) > G.ROUTE_LENGHT:
+            next_station = boat.route.pop(0)
+        else:
+            boat.fill_route_length()
+            next_station = boat.route.pop(0)
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
+        boat.stats.luggage[self.sim.env.now] = len(boat.passengers)
+        drive = self.sim.env.process(boat.drive(next_station))
+        yield drive
+
+    def dropoff(self, boat):
+
+        dropoff = self.sim.env.process(boat.dropoff())
+        yield dropoff
+
+    def pickup(self, boat):
+        start = time.time()
+        #1 get demand at all stations
+        #2 sort by priority
+        #3 match demands to all boats
+        self.final_picks[boat] = []
+        self.passenger_info()
+        for passenger in self.passengers_open:
+            if passenger.dep == boat.location.id:
+                if passenger.get_best_score() == boat:
+                    if self.start_restrictions[boat] == True:
+                        if passenger.dest in self.passenger_restrictions:
+                            self.final_picks[boat].append(passenger)
+                    elif boat.drivable(passenger.dep, passenger.dest):
+                        self.final_picks[boat].append(passenger)
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("PU:%s:\t%i" % (boat.id, took))
+        pickup = self.sim.env.process(boat.pickup_selection(self.final_picks[boat]))
+        yield pickup
 
     def init_vals(self):
 
@@ -98,123 +196,41 @@ class Decision_Union:
     def update_vals(self, boat):
         # Reset values
         for station in self.all_stations:
-            for i in range (len(self.pass_dest_at_location[station])):
+            for i in range(len(self.pass_dest_at_location[station])):
                 self.pass_dest_at_location[station][i][1] = 0
         # Passenger-Destinations at current location
         for station in self.all_stations:
             for station2 in self.all_stations:
                 for passenger in boat.location.passengers.passengers:
                     if passenger.dest == station.id:
-                        self.pass_dest_at_location[station][station2.id - 1][1] +=1
+                        self.pass_dest_at_location[station][station2.id - 1][1] += 1
         # Passenger-Destinations on board
-        if len(boat.passengers)>0:
+        if len(boat.passengers) > 0:
             for boat in self.boats.values():
                 for station in self.all_stations:
                     for passenger in boat.passengers:
                         if passenger.dest == station.id:
-                            self.pass_dest_boarded[boat][station.id-1][1] +=1
+                            self.pass_dest_boarded[boat][station.id - 1][1] += 1
 
     def charger_infos(self, boat):
         start = time.time()
         charger_infos = []
         distance = 0
-        for i in range (0, len(boat.route)-1):
+        # if type(boat.location) == Network.Charger:
+        #     charger_infos.append([0, []])
+        for i in range(0, len(boat.route) - 1):
             station = self.map.get_station(boat.route[i])
-            if i==0:
-                #distance += self.map.get_distance(boat.location, station)
+            if i == 0:
                 distance += self.sim.map.distances[boat.location][station]
 
             else:
-                #distance += self.map.get_distance(self.map.get_station_object(boat.route[i-1]), station)
                 distance += self.sim.map.distances[self.map.get_station(boat.route[i - 1])][station]
 
             if type(station) == Network.Charger:
-                charger_infos.append([distance, boat.route[:i+1]])
+                charger_infos.append([distance, boat.route[:i + 1]])
         took = (time.time() - start) * 1000
         G.log_comptimes.error("charger_infos():\t%i" % (took))
         return charger_infos
-
-
-    def take(self, boat):
-        while True:
-
-            yield self.sim.env.process(self.dropoff(boat))
-
-            yield self.sim.env.process(self.charge(boat))
-
-            yield self.sim.env.process(self.pickup(boat))
-
-            yield self.sim.env.process(self.drive(boat))
-
-
-    def charge(self, boat):
-        start = time.time()
-        # if self.boat.idle:
-        self.update_vals(boat)
-        if self.passenger_restrictions[boat] != None:
-            self.passenger_restrictions[boat] = self.passenger_restrictions[boat][1:]
-        # POSSIBLE-CHARGERS-EVALUATION
-        charger_infos = self.charger_infos(boat)
-        pass_dests = boat.get_passenger_destinations()
-        # keep if reachable and can drop passengers on the way
-        doable_distant_chargers = []
-        for charger_info in charger_infos:
-            if boat.battery > charger_info[0] * boat.consumption:
-                if all(pas_des in charger_info[1] for pas_des in pass_dests):
-                    doable_distant_chargers.append(charger_info)
-            else: break
-        if len(doable_distant_chargers) == 1:
-            self.planned_to_charge_at[boat] = doable_distant_chargers[0][1][-1]
-        if boat.location.id == self.planned_to_charge_at[boat]:
-            self.charge_now[boat] = True
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("CH:%s:\t%i" % (boat.id, took))
-        if self.charge_now[boat]:
-            # if start_restrictions:
-            if len(boat.passengers) > 0:
-                print("PROBLEM CHARGE: charging with passengers")
-            charged = self.sim.env.process(boat.get_location().serve(boat, 200))
-            self.charge_now[boat] = False
-            self.planned_to_charge_at[boat] = None
-            self.start_restrictions[boat] = False
-            self.passenger_restrictions[boat] = None
-            yield charged
-        else:
-            if len(charger_infos) == 0:
-                print("ERROR PLANNING: Big Problem. Will sink.")
-
-    def drive(self, boat):
-        start = time.time()
-        if len(boat.route) > 0:
-            next_station = boat.route.pop(0)
-        else:
-            boat.fill_route(simtime=G.SIMTIME*0.1)
-            next_station = boat.route.pop(0)
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
-        drive = self.sim.env.process(boat.drive(next_station))
-        yield drive
-
-    def dropoff(self, boat):
-
-        dropoff = self.sim.env.process(boat.dropoff())
-        yield dropoff
-
-    def pickup(self, boat):
-        start = time.time()
-        #1 get demand at all stations
-        #2 sort by priority
-        #3 match demands to all boats
-        self.final_picks[boat] = []
-        self.passenger_info()
-        for passenger in self.passengers_open:
-            if passenger.dep == boat.location.id:
-                if passenger.get_best_score() == boat:
-                    self.final_picks[boat].append(passenger)
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("PU:%s:\t%i" % (boat.id, took))
-        pickup = self.sim.env.process(boat.pickup_selection(self.final_picks[boat]))
-        yield pickup
 
     def passenger_info(self):
         # update open passengers
@@ -228,7 +244,7 @@ class Decision_Union:
         for boat in self.boats.values():
             for passenger in self.passengers_open:
                 if boat.drive_stops(passenger.dep) < 1:
-                    drive_time = boat.drive_time(passenger.dep, passenger.dest)
+                    drive_time = boat.drive_wait_time(passenger.dep, passenger.dest)
                     actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
                         self.map.get_station(passenger.dest)]
                     self.boat_passenger_scores[boat][passenger] = (drive_time / actual_distance)

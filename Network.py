@@ -3,6 +3,7 @@ from colorama import Fore, Back, Style
 import Global as G
 import Algorithms.Dijkstra
 import Passengers
+import Stats
 import logging
 import simpy
 #ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
@@ -25,7 +26,6 @@ class Graph:
         self.create_map()
         self.init_demand()
         self.generate_initial_demands(G.initial_demand)
-
 
     def create_distance_matrix(self):
         for station in self.stations.values():
@@ -201,6 +201,7 @@ class Station:
         self.passengers = passengers_object
         self.sim.env.process(self.passengers.update_poisson())
 
+
     def get_demand(self):
         return len(self.passengers.passengers)
 
@@ -261,6 +262,12 @@ class Station:
     # Method for station to know it has a new visitor (boat)
     def add_visitor(self, boat):
         self.boats.append(boat)
+        try:
+            self.sim.stats.demand_in_time[self][self.sim.env.now] = self.get_demand()
+            self.sim.stats.visited_stations[boat][self] += 1
+        except KeyError:
+            print("CATCH")
+
 
     # Method for station to know a boat has left
     def remove_visitor(self, boat):
@@ -320,7 +327,7 @@ class Charger(Station):
                 # if (chargeNeeded == -1) or (chargeNeeded > 100-boat.get_battery()):
 
                 current_bat = boat.get_battery()
-                chargeNeeded = 100 - current_bat
+                chargeNeeded = G.BATTERY - current_bat
                 # Todo Charge: Realistic timeout
                 charge = self.env.process(boat.charge(chargeNeeded))
                 # else:
