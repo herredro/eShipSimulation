@@ -39,7 +39,7 @@ class Dijk():
             path.append([element.getDist()])
             return path[::-1]  # Return reversed path
         # creating list of neighbors to expand
-        nextPushesList = list(self.map.get_station_object(element.getID()).get_connections().items())
+        nextPushesList = list(self.map.get_station(element.getID()).get_connections().items())
         if self.debug: print("Next to expand: %s, its Neighbors: %s" % (element, nextPushesList))
 
         for new in nextPushesList:

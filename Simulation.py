@@ -1,12 +1,14 @@
 import simpy
 import Controller as Controller
 import Network as Map
-import Passengers
+import Stats
 import Global as G
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
-import Stats
+import Boat
 import matplotlib.pyplot as plt
+
+
 
 
 
@@ -21,64 +23,89 @@ class Simulation:
 
         # for i in range(100):
         #     self.simpy(i)
-        self.simpy(2)
-        plt.show()
+        data = []
+        data.append(self.simpy(True))
+        data.append(self.simpy(False))
 
-    def simpy(self, numboats):
+        self.show_data(data)
+
+    def simpy(self, mode, num_boats = G.NUM_BOATS):
+        self.mode = mode
+        self.stats = Stats.Stats(self)
         self.env = simpy.Environment()
         print(Style.RESET_ALL)
-        print("BOAT SIMULATOR\nINITIAL SETTINGS:\n")
         self.map = Map.Graph(self)
         self.strategy = Strategies.Strategies(self.map)
-        self.cb = Controller.Boats(self)
 
-        self.cb.new_boat(1, loc=self.map.get_station_object(1), bat=100, cons=0.5)
-        self.cb.new_boat(2, loc=self.map.get_station_object(2), bat=100, cons=1)
-        self.cb.new_boat(3, loc=self.map.get_station_object(3), bat=100, cons=2)
-        # self.cb.create_basic_boats(numBoats2create=numboats, bat=100)
+        if not mode:
+            # ANARCHY
+            print("BOAT SIMULATOR ANARCHY\nINITIAL SETTINGS:\n")
+            self.cb = Controller.Boats(self, mode, num_boats)
+        if mode:
+            # CENTRAL CONTROL
+            print("BOAT SIMULATOR CENTRAL\nINITIAL SETTINGS:\n")
+            self.cb = Controller.Boats(self, mode, num_boats)
 
-        self.map.printmapstate()
-
-        self.env.run(until=1000)
-        self.cb.printboatlist()
-        self.map.printmapstate()
-
-        self.visualization_stations()
-
-        self.visualization_boats()
-
-
-        # boat = self.cb.boats[1]
-        # plot = boat.stats.plot_free([boat.stats.pickedup, boat.stats.droppedoff])
-        # plot.show()
-
-
-        # boat.stats.save_dict(boat.stats.droveto)
-        # boat.stats.open_dict("data.txt")
-
-    def visualization_stations(self):
-        # STATIONS
-        # for station in self.map.get_all_stations():
-        #     self.map.stats.plot_step([self.map.stats.usage_in_time[station]])
-        print("STATS STATIONS")
-
-        for station in self.map.stats.energy_supplied:
-            print("%s supplied %i units" %(str(station), self.map.stats.energy_supplied[station]))
-
-        self.fig, self.ax = plt.subplots()
-        plt.title("Stations")
-        for station in self.map.stats.usage_in_time:
-            self.ax.step(self.map.stats.usage_in_time[station].keys(), self.map.stats.usage_in_time[station].values(), label="Station %s"%str(station))
-        plt.legend()
-
-
-    def visualization_boats(self):
-        print("Boat passengers")
-        self.fig2, self.ax2 = plt.subplots()
-        plt.title("BOATS")
+        self.stats.init()
         for boat in self.cb.boats.values():
-            self.ax2.step(boat.stats.luggage.keys(), boat.stats.luggage.values(), label="Boat %s" % str(boat))
+            print("B" + str(boat.id) + " Route: ", end="")
+            print(boat.route)
+        self.cb.start_driving()
+        self.map.printmapstate()
+        demand_state = []
+        for station in self.map.stations.values():
+            demand_state.append(station.get_demand())
+        self.stats.final_demand = demand_state
+        return self.stats
+
+    def show_data(self, runs):
+        for run in runs:
+            print(run.final_demand)
+
+        colors = ["blue", "red", "green", "blue"]
+        col = 0
+        for run in runs:
+            stations = list(run.demand_in_time.values())
+            num = 1
+            if run.mode is "Central":
+                line = "dashed"
+            else:
+                line = "dotted"
+
+            for station in stations:
+                plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' %(len(self.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+                plt.plot(station.keys(), station.values(), label=run.mode+": S"+str(num), linestyle = line, color=colors[num])
+                num += 1
+            col += 1
         plt.legend()
+        plt.show()
+        print(1)
+
+
+
+    # def visualization_stations(self):
+    #     # STATIONS
+    #     # for station in self.map.get_all_stations():
+    #     #     self.map.stats.plot_step([self.map.stats.usage_in_time[station]])
+    #     print("STATS STATIONS")
+    #
+    #     for station in self.map.stats.energy_supplied:
+    #         print("%s supplied %i units" %(str(station), self.map.stats.energy_supplied[station]))
+    #
+    #     self.fig, self.ax = plt.subplots()
+    #     plt.title("Stations")
+    #     for station in self.map.stats.usage_in_time:
+    #         self.ax.step(self.map.stats.usage_in_time[station].keys(), self.map.stats.usage_in_time[station].values(), label="Station %s"%str(station))
+    #     plt.legend()
+    #
+    #
+    # def visualization_boats(self):
+    #     print("Boat passengers")
+    #     self.fig2, self.ax2 = plt.subplots()
+    #     plt.title("BOATS")
+    #     for boat in self.cb.boats.values():
+    #         self.ax2.step(boat.stats.luggage.keys(), boat.stats.luggage.values(), label="Boat %s" % str(boat))
+    #     plt.legend()
 
 
     def manual(self):

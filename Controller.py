@@ -1,43 +1,63 @@
 import Network as Net
 import Boat as Boat
 from Algorithms import Strategies as Strategies
+import Stats
 
 import Global as G
 from tabulate import tabulate
 from colorama import Fore, Back, Style
-import simpy
 
 
-# Controller for Map and Boats. While Map and Boat classes provide basic functionality,
+# Controller for Boats. While the Boat class provides basic functionality,
 # the controller takes care of decisions and actions such as creation and movements
 
 class Boats:
     # Boat Controller has map, number of boats, boats themselves as dictionary
-    def __init__(self, sim):
+    def __init__(self, sim, mode, num=G.NUM_BOATS):
         self.sim = sim
         self.map = sim.map
         self.env = sim.env
+        self.mode = mode
         self.numBoats = 0
         self.boats = {}
-        self.move_strategy = Strategies.Strategies(self.map)
+        self.map_strategy = Strategies.Strategies(self.map)
+        Boat.Boat.count = 0
+        self.create_basic_boats(num)
+
+    def start_driving(self):
+        if not self.mode:
+            for boat in self.boats.values():
+                # Anarchy
+                self.sim.env.process(boat.strat.take())
+        if self.mode:
+            self.strategy = Strategies.Decision_Union(self.sim)
+            for boat in self.boats.values():
+                # Central
+                self.env.process(self.strategy.take(self.boats[boat.id]))
+        self.env.run(until=G.SIMTIME)
+
+
+
+
+
 
     # Creates a Boat and adds to boat dict.
-    def new_boat(self, id, loc=G.locaction, bat=G.battery, chsp=G.chargingspeed, cons=G.consumption):
+    def new_boat(self, loc=G.locaction, bat=G.BATTERY, chsp=G.chargingspeed, cons=G.consumption):
         # default location -1 means to position boat at start-vertex
         if loc == -1:
-            loc = self.map.get_station_object(G.startVertex)
-        boat = Boat.Boat(self.sim, id, loc, battery=bat, charging_speed=chsp, consumption=cons)
-        self.boats[id] = boat
+            loc = self.map.get_station(G.startVertex)
+        boat = Boat.Boat(self.sim, loc, battery=bat, charging_speed=chsp, consumption=cons)
+        self.boats[boat.id] = boat
         # location needs to know it has new visitor
         loc.add_visitor(boat)
         self.numBoats += 1
 
     # Method to create several basic boats at once
-    def create_basic_boats(self, numBoats2create=G.numBoats, bat= 100):
+    def create_basic_boats(self, numBoats2create, bat= G.BATTERY):
         for i in range(self.numBoats+1, self.numBoats+numBoats2create+1):
-            boat = Boat.Boat(self.sim, id=(str(i)), location=self.map.get_station_object(1), battery=bat)
+            boat = Boat.Boat(self.sim, location=self.map.get_station(1), battery=bat)
             self.boats[i] = boat
-            self.map.get_station_object(1).add_visitor(boat)
+            self.map.get_station(1).add_visitor(boat)
             self.numBoats = self.numBoats + 1
 
     def sp_ui_boat_choice(self):
@@ -88,7 +108,7 @@ class Boats:
             # Check if user-specified location is in range (i.e. edge existing)
             try:
                 choice_int = int(choice)
-                to = self.map.get_station_object(choice_int)
+                to = self.map.get_station(choice_int)
                 #Simpy
                 self.env.process(boat.take(to))
                 self.env.step()
@@ -100,28 +120,6 @@ class Boats:
         if self.env.peek() == self.env.now:
             self.env.step()
         self.sp_ui_fleet_destination()
-
-    def sp_fleet_move_algo(self, strategy=None):
-
-        #while self.map.demand_left():
-            # self.printtime()
-            # self.printboatlist()
-            # self.map.printmapstate()
-
-        val = self.env.process(gen)
-        print(val)
-
-                #yield boat
-                #self.env.process(self.decision.take(boat))
-                #next_decision = self.decision.take(boat)
-                #next_station = strategy(self.map, boat)
-                #self.env.process(next_decision)
-                #self.env.process()
-        self.env.run()
-        print("FINAL")
-        self.printtime()
-        self.printboatlist()
-        self.map.printmapstate()
 
 
     # Prints list of boats including their specs
@@ -234,7 +232,7 @@ class Boats:
             # Check if user-specified location is in range (i.e. edge existing)
             try:
                 choice_int = int(choice)
-                to = self.map.get_station_object(choice_int)
+                to = self.map.get_station(choice_int)
                 #self.drive(boat, to)
                 boat.take(to)
                 self.move_station__input(boat)
