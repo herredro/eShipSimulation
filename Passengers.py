@@ -22,7 +22,7 @@ class Passenger:
         return "P%s:%s->%s"%(self.id, self.dep, self.dest)
 
     def set_score(self, boat, score):
-        self.score[boat] = score
+        self.score[boat] = float(score)
 
     def get_best_score(self):
         best_boat = None
@@ -71,6 +71,7 @@ class Passengers:
             self.map.sim.stats.poisson_value[self.map.get_station(self.station)][self.map.env.now] = pois
             for i in range(pois):
                 self.new()
+                self.map.sim.stats.accured_demand += 1
             new = len(self.passengers)
             yield self.map.env.timeout(G.INTERARRIVALTIME)
             timepassed = self.map.sim.env.now - timestamp

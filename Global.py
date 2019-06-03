@@ -1,8 +1,8 @@
 import random
 import logging
 import numpy as np
-np.random.seed(123)
-random.seed(123)
+np.random.seed(1233)
+random.seed(1233)
 logging.basicConfig(level=logging.ERROR, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
 log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")

@@ -15,6 +15,7 @@ class Stats:
         self.demand_in_time = {}
         self.usage_in_time = {}
         self.waiting_demand = []
+        self.accured_demand = 0
         # BOATS
         self.boat_load_in_time = {}
         self.boat_load = {}
@@ -121,16 +122,14 @@ class Stats:
 
             # medians
             medians = {}
-            # boatload
             medians.update({"boatload": st.median(run.boat_load_raw)})
             medians.update({"boatload_ratio": st.median(run.boat_load_raw_ratio)})
             medians.update({"passenger_waiting_time": st.median(run.passenger_waiting_time)})
             medians.update({"passenger_processing_ratio": st.median(run.passenger_processing_ratio)})
             medians.update({"waiting_demand_station": st.median(run.waiting_demand)})
 
-            # population variane
+            # population variance
             pvariances = {}
-            # boatload
             pvariances.update({"boatload": st.pstdev(run.boat_load_raw)})
             pvariances.update({"boatload_ratio": st.pstdev(run.boat_load_raw_ratio)})
             pvariances.update({"passenger_waiting_time": st.pstdev(run.passenger_waiting_time)})
@@ -148,6 +147,7 @@ class Stats:
 
             print(run.mode)
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
+            print("Accured demand summed: %i" %run.accured_demand)
 
 
 

@@ -33,6 +33,8 @@ class Graph:
         for station_from in self.stations.values():
             for station_to in self.stations.values():
                 self.distances[station_from][station_to] = self.get_distance(station_from, station_to)
+
+
     def demand_left(self):
         for station in self.stations.values():
             if station.get_demand() > 0:
@@ -106,6 +108,8 @@ class Graph:
             print("ERROR: new location not existing")
             logging.error("new location not existing")
             return False
+
+
 
     def get_distance(self, a, b):
         if a == b: return 0
@@ -254,6 +258,9 @@ class Station:
         if id in self.adjacent:
             return True
         else: return False
+
+
+
 
     # Return: ID of this station
     def get_id(self):

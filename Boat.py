@@ -179,6 +179,9 @@ class Boat:
 
         return distance
 
+    def drive_wait_time(self, frm, to):
+        return self.drive_time(frm, to) + self.wait_time(frm, to)
+
     def wait_time(self, frm, to):
         time_wait = 0
         if frm in self.route:
@@ -207,12 +210,12 @@ class Boat:
         else:
             #print("DEPARTURE NOT IN ROUTEssjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsjsj")
             return 10*99
-        for i in range(dep_index+1, dest_index):
-            time_driv += self.sim.map.distances[self.sim.map.get_station(self.route[dep_index-1])][self.sim.map.get_station(self.route[dest_index])]
+        for i in range(dep_index+1, dest_index+1):
+            time_driv += self.sim.map.distances[self.sim.map.get_station
+            (self.route[i-1])][self.sim.map.get_station(self.route[i])]
         return time_driv
 
-    def drive_wait_time(self, frm, to):
-        return self.drive_time(frm, to) + self.wait_time(frm, to)
+
 
     def drive_stops(self, passenger_loc):
         if passenger_loc in self.route:
