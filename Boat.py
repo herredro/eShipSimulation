@@ -15,7 +15,7 @@ import time
 class Boat:
     # Boat specific variables
     count = 0
-    def __init__(self, sim, location, battery = 100, capacity = 10, charging_speed = 10, consumption = 1):
+    def __init__(self, sim, location, battery = 100, capacity = G.CAPACITY, charging_speed = 10, consumption = 1):
         Boat.count+=1
         self.sim = sim
         self.id = (Boat.count)
@@ -79,13 +79,17 @@ class Boat:
             #distance = self.sim.map.get_distance(self.old_loc, self.new_loc)
             distance = self.sim.map.distances[self.old_loc][self.new_loc]
             if self.drivable__battery(distance):
+                self.sim.stats.boat_load_in_time[self.id][self.sim.env.now] = len(self.passengers)
+                self.sim.stats.boat_load[len(self.passengers)] += 1
+                self.sim.stats.boat_load_raw.append(len(self.passengers))
+                self.sim.stats.boat_load_raw_ratio.append(len(self.passengers)/G.CAPACITY)
                 logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
                 print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s   \tDRIVING⚡%i%% @%s" % (self.sim.env.now, str(self), self.battery, str(stop)), end='')
                 print(Style.RESET_ALL)
                 self.old_loc.remove_visitor(self)
                 self.set_location(self.new_loc)
                 self.discharge(distance)
-                yield self.sim.env.timeout(distance)
+                yield self.sim.env.timeout(distance+G.DOCK_TIMEOUT)
                 self.new_loc.add_visitor(self)
                 self.idle = 1
                 logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
@@ -109,8 +113,6 @@ class Boat:
 
     def pickup(self, amount=None, restrictions=None):
         if self.location.get_demand() > 0:
-
-
             #Todo implement restrictions
             before = len(self.passengers)
             space_left = self.capacity - len(self.passengers)
@@ -126,9 +128,13 @@ class Boat:
                     break
             for passenger in new_pas:
                 self.passengers.append(passenger)
+                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.arrivaltime)
             after = len(self.passengers)
             self.stats.pickedup[self.sim.env.now] = len(new_pas)
-            yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
+            if len(new_pas) > 0:
+                yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
+            else:
+                yield self.sim.env.timeout(0)
             # Todo Stats: update reward to Statss-Class
             #Stats.boatreward[self]+=after
             if G.debug_passenger:
@@ -146,12 +152,17 @@ class Boat:
             if len(self.passengers) < self.capacity:
                 self.passengers.append(passenger)
                 self.location.passengers.passengers.remove(passenger)
+                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.arrivaltime)
                 got +=1
-        yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
-        if G.debug_passenger:
-            print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (had:%s, now:%s)" % (
-            self.sim.env.now, str(self), got, str(self.location), had, len(self.passengers)), end='')
-            print(Style.RESET_ALL)
+        if got > 0:
+            yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (had:%s, now:%s)" % (
+                    self.sim.env.now, str(self), got, str(self.location), had, len(self.passengers)), end='')
+                print(Style.RESET_ALL)
+        else:
+            yield self.sim.env.timeout(0)
+
 
     def drive_time_index(self, frm, to):
         if to == -1:
@@ -234,12 +245,18 @@ class Boat:
         dropped = len(tobedropped)
         for passenger in tobedropped:
             self.passengers.remove(passenger)
+            self.sim.stats.passenger_processing_ratio.append((self.sim.env.now - passenger.arrivaltime) / self.sim.map.get_distance_id(passenger.dep, passenger.dest))
         self.stats.droppedoff[self.sim.env.now] = dropped
-        if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (self.sim.env.now, str(self), dropped, self.location), end='')
-        print(Style.RESET_ALL)
+
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DO:%s:\t%i" % (self.id, took))
-        yield self.sim.env.timeout(0)
+        if dropped > 0:
+            yield self.sim.env.timeout(G.DROPOFF_TIMEOUT)
+            if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (
+                                        self.sim.env.now, str(self), dropped, self.location), end='')
+            print(Style.RESET_ALL)
+        else: yield self.sim.env.timeout(0)
+
 
     def boarded_destinations(self):
         destinations = []

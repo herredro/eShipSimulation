@@ -12,8 +12,6 @@ class Passenger:
         Passenger.count +=1
         self.id = Passenger.count
         self.arrivaltime = arrivaltime
-        # Todo metrics record waiting time
-        self.time_processed = -10000
         self.dep = dep
         self.dest = dest
         #Todo Simpy: Make passenger Resource
@@ -65,6 +63,7 @@ class Passengers:
         print("SUCCESS POISSON INIT STATION %i" %self.station)
         turn = 1
         while True:
+            timestamp = self.map.sim.env.now
             old = len(self.passengers)
             pois = np.random.poisson(self.arrival_expect)
             pois = np.random.poisson(G.poisson_arrivals_expected[self.station])
@@ -74,6 +73,9 @@ class Passengers:
                 self.new()
             new = len(self.passengers)
             yield self.map.env.timeout(G.INTERARRIVALTIME)
+            timepassed = self.map.sim.env.now - timestamp
+            for i in range(timepassed):
+                self.map.sim.stats.waiting_demand.append(len(self.passengers))
             #print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
             turn += 1
 

@@ -27,7 +27,11 @@ class Simulation:
         data.append(self.simpy(True))
         data.append(self.simpy(False))
 
-        self.show_data(data)
+        self.pre_process_data(data)
+        #self.visualize_data(data)
+
+        self.stats.analyze_data(data)
+        self.stats.visualize_data(data)
 
     def simpy(self, mode, num_boats = G.NUM_BOATS):
         self.mode = mode
@@ -58,12 +62,57 @@ class Simulation:
         self.stats.final_demand = demand_state
         return self.stats
 
-    def show_data(self, runs):
+    def analyze_data(self, runs):
+        run = runs[0]
+
+        final_demand = {}
+        boat_load = {}
+
+#        final_demand.update(runs.index(run), run.final_demand)
+        boat_load.update()
+
+
+
+
+
+
+
+
+
+    def visualize_data(self, runs):
         for run in runs:
             print(run.final_demand)
 
         colors = ["blue", "red", "green", "blue"]
         col = 0
+
+        # Histogram Boats
+        # 1 Boat
+
+
+        #plt.subplots(1, G.NUM_BOATS)
+        boatload = []
+        f1 = plt.figure(1)
+        for run in runs:
+            plt.subplot(1,2,runs.index(run)+1)
+            vals = []
+            for load in range(0,G.CAPACITY+1):
+                vals.append(load)
+            plt.bar(run.boat_load.keys(), run.boat_load.values())
+            plt.title("Boat Load in %s" %(run.mode))
+            plt.legend()
+
+        # Histogram
+        f2 = plt.figure(2)
+        for run in runs:
+            plt.subplot(1,2,runs.index(run)+1)
+            vals = []
+            plt.hist(run.passenger_processing_ratio)
+            plt.title("Passenger waiting ratio in %s" %(run.mode))
+            plt.legend()
+
+        # Demand Stations
+        f3 = plt.figure(3)
         for run in runs:
             stations = list(run.demand_in_time.values())
             num = 1
@@ -78,10 +127,13 @@ class Simulation:
                 num += 1
             col += 1
         plt.legend()
+
         plt.show()
+
         print(1)
 
-
+    def pre_process_data(self, runs):
+        pass
 
     # def visualization_stations(self):
     #     # STATIONS

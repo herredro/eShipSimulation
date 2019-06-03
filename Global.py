@@ -1,23 +1,26 @@
 import random
 import logging
 import numpy as np
-# np.random.seed(123)
-# random.seed(123)
+np.random.seed(123)
+random.seed(123)
 logging.basicConfig(level=logging.ERROR, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
 log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
-NUM_BOATS = 5
+NUM_BOATS = 4
 locaction=-1
 BATTERY=10000
 chargingspeed=10
+CAPACITY = 10
 consumption=1
 ROUTE_LENGHT = 10
 
-SIMTIME = 5000
+SIMTIME = 100
 
-PICK_UP_TIMEOUT = 50
+DOCK_TIMEOUT = 5
+PICK_UP_TIMEOUT = 1
+DROPOFF_TIMEOUT = 1
 
 debug = 1
 simpy = 1

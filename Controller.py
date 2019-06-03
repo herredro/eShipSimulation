@@ -184,7 +184,10 @@ class Boats:
         print("\n\n\n\n")
         self.printboatlist()
         self.map.printmapstate()
-        print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: " %(boat.get_id(), boat.get_battery(), boat.get_location().get_id()) + str(boat.get_location().get_connections()) + ", {station: distance}")
+        print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: "
+              %(boat.get_id(), boat.get_battery(), boat.get_location().get_id())
+              + str(boat.get_location().get_connections()) + ", {station: distance}")
+
 
         choice = input("Enter Strategy:\n"
                        "1-9 = Station X\n"
