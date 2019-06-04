@@ -24,6 +24,15 @@ class Strategies:
         closest_stop = map.get_station(closest_tuple[0][0])
         return closest_stop
 
+    def next_station(self):
+        while True:
+            i = 1
+            while i < len(self.map.get_all_stations())+1:
+                next_stop = self.map.get_station(i)
+                yield next_stop
+                i += 1
+
+
     @staticmethod
     def passenger_prio(map, boat):
         boat.strat.update_dest_vals()
@@ -71,6 +80,8 @@ class Decision_Union:
         self.planned_to_charge_at = {}
         self.charge_now = {}
         self.init_vals()
+
+        self.routeempty = [0,0]
 
 
     def take(self, boat):
@@ -133,9 +144,11 @@ class Decision_Union:
         start = time.time()
         if len(boat.route) > G.ROUTE_LENGHT:
             next_station = boat.route.pop(0)
+            self.routeempty[0]+=1
         else:
             boat.fill_route_length()
             next_station = boat.route.pop(0)
+            self.routeempty[1] += 1
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
         boat.stats.luggage[self.sim.env.now] = len(boat.passengers)
@@ -154,7 +167,7 @@ class Decision_Union:
         #3 match demands to all boats
         self.final_picks[boat] = []
         # Todo pickup_improv: passenger_info only for passengers at boat.location !!
-        self.passenger_info(boat.location)
+        self.passenger_info(boat)
         for passenger in self.passengers_open:
             if passenger.get_best_matches() == []:
                 print("ERROR: Passenger has NO best score for boat")
@@ -167,6 +180,7 @@ class Decision_Union:
                             if G.d_route_change: print("CHANGED ROUTE: %s --> %s" %(boat.route, new_route))
                             boat.route = new_route[1]
                         self.final_picks[boat].append(passenger)
+                        passenger.promised_delay = passenger.score[boat]-self.map.get_distance_id(passenger.dep, passenger.dest)
 
         took = (time.time() - start) * 1000
         G.log_comptimes.error("PU:%s:\t%i" % (boat.id, took))
@@ -290,65 +304,65 @@ class Decision_Union:
         took = (time.time() - start) * 1000
         G.log_comptimes.error("passenger_scores:\t%i" % (took))
 
-    def passenger_info(self):
+    # def passenger_info(self):
+    #     # update open passengers
+    #     self.passengers_open = []
+    #     for station in self.all_stations:
+    #         for passenger in station.passengers.passengers:
+    #             self.passengers_open.append(passenger)
+    #     # update boat-passenger scores
+    #     start = time.time()
+    #     calculated = 0
+    #     for passenger in self.passengers_open:
+    #         for boat in self.boats.values():
+    #
+    #             wait_time = boat.wait_time_insert(passenger.dep)
+    #             drive_time= boat.drive_time_insert(passenger.dep, passenger.dest)
+    #             total_time= wait_time[1] + drive_time[1]
+    #
+    #             actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
+    #                 self.map.get_station(passenger.dest)]
+    #             pass_waiting_score = float(total_time / actual_distance)
+    #
+    #             cap_left = (boat.capacity-len(boat.passengers))
+    #             operating_grade_score = (1/cap_left) if (cap_left > 0) else 99
+    #
+    #             penalties = 0
+    #             if wait_time[0]:
+    #                 penalties += 1
+    #             if drive_time[0]:
+    #                 penalties += 1
+    #             penalty_discount = G.PENALTY_ROUTE_DIVERSION**penalties
+    #
+    #             passenger.set_score(boat, pass_waiting_score*penalty_discount)
+    #
+    #             calculated += 1
+    #             #print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
+    #     #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
+    #     took = (time.time() - start) * 1000
+    #     G.log_comptimes.error("passenger_scores:\t%i" % (took))
+
+    def passenger_info_ratio(self, boat):
         # update open passengers
         self.passengers_open = []
-        for station in self.all_stations:
-            for passenger in station.passengers.passengers:
-                self.passengers_open.append(passenger)
-        # update boat-passenger scores
-        start = time.time()
-        calculated = 0
-        for passenger in self.passengers_open:
-            for boat in self.boats.values():
 
-                wait_time = boat.wait_time_insert(passenger.dep)
-                drive_time= boat.drive_time_insert(passenger.dep, passenger.dest)
-                total_time= wait_time[1] + drive_time[1]
-
-                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
-                    self.map.get_station(passenger.dest)]
-                pass_waiting_score = float(total_time / actual_distance)
-
-                cap_left = (boat.capacity-len(boat.passengers))
-                operating_grade_score = (1/cap_left) if (cap_left > 0) else 99
-
-                penalties = 0
-                if wait_time[0]:
-                    penalties += 1
-                if drive_time[0]:
-                    penalties += 1
-                penalty_discount = G.PENALTY_ROUTE_DIVERSION**penalties
-
-                passenger.set_score(boat, pass_waiting_score*penalty_discount)
-
-                calculated += 1
-                #print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
-        #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("passenger_scores:\t%i" % (took))
-
-    def passenger_info(self, location):
-        # update open passengers
-        self.passengers_open = []
-
-        for passenger in location.passengers.passengers:
+        for passenger in boat.location.passengers.passengers:
             self.passengers_open.append(passenger)
         # update boat-passenger scores
         start = time.time()
         calculated = 0
         for passenger in self.passengers_open:
-            for boat in self.boats.values():
+            for some_boat in self.boats.values():
 
-                wait_time = boat.wait_time_insert(passenger.dep)
-                drive_time = boat.drive_time_insert(passenger.dep, passenger.dest)
+                wait_time = some_boat.wait_time_insert(passenger.dep)
+                drive_time = some_boat.drive_time_insert(passenger.dep, passenger.dest)
                 total_time = wait_time[1] + drive_time[1]
 
                 actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
                     self.map.get_station(passenger.dest)]
                 pass_waiting_score = float(total_time / actual_distance)
 
-                cap_left = (boat.capacity - len(boat.passengers))
+                cap_left = (some_boat.capacity - len(some_boat.passengers))
                 operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
 
                 penalties = 0
@@ -358,10 +372,51 @@ class Decision_Union:
                     penalties += 1
                 penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
 
-                passenger.set_score(boat, pass_waiting_score * penalty_discount)
+                passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
 
                 calculated += 1
                 # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
+            #if boat is not passenger.get_best_matches(): print("present boat not best match")
+        # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("passenger_scores:\t%i" % (took))
+
+    def passenger_info(self, boat):
+        # update open passengers
+        self.passengers_open = []
+
+        for passenger in boat.location.passengers.passengers:
+            self.passengers_open.append(passenger)
+        # update boat-passenger scores
+        start = time.time()
+        calculated = 0
+        for passenger in self.passengers_open:
+            for some_boat in self.boats.values():
+
+                wait_time = some_boat.wait_time_insert(passenger.dep)
+                drive_time = some_boat.drive_time_insert(passenger.dep, passenger.dest)
+                total_time = wait_time[1] + drive_time[1]
+
+                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
+                    self.map.get_station(passenger.dest)]
+                pass_waiting_score = float(total_time / actual_distance)
+                pass_waiting_score = total_time
+
+                cap_left = (some_boat.capacity - len(some_boat.passengers))
+                operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
+
+                penalties = 0
+                if wait_time[0]:
+                    penalties += 1
+                if drive_time[0]:
+                    penalties += 1
+                penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
+
+                passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
+
+                calculated += 1
+                # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
+            # if boat is not passenger.get_best_matches(): print("present boat not best match")
         # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
         took = (time.time() - start) * 1000
         G.log_comptimes.error("passenger_scores:\t%i" % (took))
@@ -397,7 +452,7 @@ class Decision_Anarchy:
 
 
     def take(self):
-        strat = self.move_strategy.closest_neighbor
+        strat = self.move_strategy.next_station()
         #strat = self.move_strategy.max_reward
         start_restrictions = False
         passenger_restrictions = None
@@ -458,7 +513,8 @@ class Decision_Anarchy:
             yield pickup
             # REGULAR DRIVE
             self.boat.stats.luggage[self.sim.env.now] = len(self.boat.passengers)
-            next_station = strat(self.map, self.boat)
+            #next_station = strat(self.map, self.boat)
+            next_station = next(strat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive
 
@@ -501,8 +557,6 @@ class Decision_Anarchy:
         self.sim.env.process(boat.location.serve(boat, 100 - boat.battery))
 
     def update_dest_vals(self):
-        # if len(self.boat.passengers) < 1:
-        #     return None
         # Reset values
         for i in range (len(self.pass_dest_at_location)):
             self.pass_dest_at_location[i][1] = 0

@@ -23,10 +23,14 @@ class Stats:
         self.boat_load_raw = []
         self.boat_load_raw_ratio = []
         self.boat_at_station = []
+        self.drovefromto = []
         # PASSENGERS
         self.passenger_processing_ratio = []
         self.passenger_waiting_time = []
+        self.passenger_promise = []
+        self.dropped_passengers = []
         # MISC
+        self.poisson_value_station = {}
         self.poisson_value = {}
         if sim.mode:
             self.mode = "Central"
@@ -39,21 +43,29 @@ class Stats:
             self.demand_in_time[station][0] = 0
             self.usage_in_time[station] = {}
             self.usage_in_time[station][0] = 0
-            self.poisson_value[station] = {}
+            self.poisson_value_station[station] = {}
+
+
         # Boat
         self.visited_stations = {}
         for boat in self.sim.cb.boats.values():
             self.visited_stations[boat] = {}
+
             for station in self.sim.map.get_all_stations():
                 self.visited_stations[boat][station] = 0
+
         for i in range(1,G.NUM_BOATS+1):
             self.boat_load_in_time[i] = {}
         for i in range(0, G.CAPACITY+1):
             self.boat_load[i] = 0
         for i in range(G.NUM_BOATS):
             self.boat_at_station.append([ "B%s" %str(i+1) ])
+            self.drovefromto.append([])
             for j in range(len(self.sim.map.get_all_stations())):
                 self.boat_at_station[i].append(0)
+                self.drovefromto[i].append(["S%s"%str(j+1)])
+                for k in range(len(self.sim.map.get_all_stations())):
+                    self.drovefromto[i][j].append(0)
 
 
         for station in self.sim.map.get_all_stations():
@@ -112,7 +124,32 @@ class Stats:
             col += 1
         plt.legend()
 
+        # Promised time difference
         f4 = plt.figure(4)
+        x = np.linspace(0, len(runs[1].passenger_promise)-1, len(runs[1].passenger_promise))
+        plt.title('Delta Passenger promise over time with %i boats, IAT:%i, MAE:%i' % (
+            len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+        plt.plot(x, runs[1].passenger_promise, 'ro')
+
+        # New demand over time
+        f5 = plt.figure(5)
+        colors = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green", "blue"]
+        col = 0
+        num = 1
+        for run in runs:
+            if run.mode is "Central":
+                line = "dashed"
+            else:
+                line = "dotted"
+            plt.title('New demand over time with %i boats, IAT:%i, MAE:%i' % (
+                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+            plt.plot(run.poisson_value.keys(), run.poisson_value.values(), alpha=0.5, label=run.mode + ": S" + str(num),
+                     linestyle=line,
+                     color=colors[num])
+            num += 1
+        plt.legend()
+
+        f6 = plt.figure(6)
         colors = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green", "blue"]
         col = 0
         for run in runs:
@@ -124,8 +161,10 @@ class Stats:
                 line = "dotted"
 
             for station in stations:
-                plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' %(len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
-                plt.plot(station.keys(), station.values(), label=run.mode+": S"+str(num), linestyle = line, color=colors[num])
+                plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' % (
+                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+                plt.plot(station.keys(), station.values(), label=run.mode + ": S" + str(num), linestyle=line,
+                         color=colors[num])
                 num += 1
             col += 1
         plt.legend()
@@ -175,6 +214,11 @@ class Stats:
 
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
             print("Accured demand summed: %i" %run.accured_demand)
+            if run.mode == "Central":
+                mean =  st.mean(run.passenger_promise)
+                median =st.median(run.passenger_promise)
+                pvar = st.pstdev(run.passenger_promise)
+                print("passenger promise failure mean, median, variance: ", mean, median, pvar)
 
             print("Stations approached per boat in %")
             for i in range(len(run.boat_at_station)):
@@ -182,8 +226,13 @@ class Stats:
                 for j in range(1, len(run.boat_at_station[0])):
                     run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
             print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
-            print("\n\n")
 
+            # print("Quantities Boats going from to:")
+            # for i in range(G.NUM_BOATS):
+            #     print("Boat %s" %(i+1))
+            #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+
+            print("\n\n")
 
 
 

@@ -17,6 +17,7 @@ class Passenger:
         self.dest = dest
         #Todo Simpy: Make passenger Resource
         #self.res = Resource(1)
+        self.promised_delay = None
         self.score = {}
 
     def __str__(self):
@@ -25,12 +26,18 @@ class Passenger:
     def set_score(self, boat, score):
         self.score[boat] = float(score)
 
+    def set_dropoff(self, time, ratio):
+        self.dropoff_time = time
+        self.dropoff_ratio= ratio
+
     def get_best_matches(self):
         best_boats = []
         best_score = 10*99
         for boat, score in self.score.items():
             if score < best_score:
                 best_score = score
+                best_boats = [boat]
+            elif score == best_score:
                 best_boats.append(boat)
         return best_boats
 
@@ -69,7 +76,8 @@ class Passengers:
             pois = np.random.poisson(self.arrival_expect)
             pois = np.random.poisson(G.poisson_arrivals_expected[self.station])
             pois = G.poisson_arrivals[self.station-1][turn]
-            self.map.sim.stats.poisson_value[self.map.get_station(self.station)][self.map.env.now] = pois
+            self.map.sim.stats.poisson_value_station[self.map.get_station(self.station)][self.map.env.now] = pois
+            self.map.sim.stats.poisson_value[self.map.env.now] = pois
             for i in range(pois):
                 self.new()
                 self.map.sim.stats.accured_demand += 1

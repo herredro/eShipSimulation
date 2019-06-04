@@ -23,6 +23,7 @@ class Boats:
         self.map_strategy = Strategies.Strategies(self.map)
         Boat.Boat.count = 0
         self.create_basic_boats(num)
+        self.strategy = None
 
     def start_driving(self):
         if not self.mode:
@@ -54,10 +55,12 @@ class Boats:
 
     # Method to create several basic boats at once
     def create_basic_boats(self, numBoats2create, bat= G.BATTERY):
+        next_station = self.map_strategy.next_station()
         for i in range(self.numBoats+1, self.numBoats+numBoats2create+1):
-            boat = Boat.Boat(self.sim, location=self.map.get_station(1), battery=bat)
+            station = (next(next_station))
+            boat = Boat.Boat(self.sim, location=station, battery=bat)
             self.boats[i] = boat
-            self.map.get_station(1).add_visitor(boat)
+            station.add_visitor(boat)
             self.numBoats = self.numBoats + 1
 
     def sp_ui_boat_choice(self):

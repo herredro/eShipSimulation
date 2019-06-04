@@ -209,6 +209,7 @@ class Station:
     # Method to add an adjacent station
     def add_neighbor(self, neighbor, weight=0):
         self.adjacent[neighbor] = weight
+        print(1)
 
     def init_demand(self, passengers_object):
         self.passengers = passengers_object

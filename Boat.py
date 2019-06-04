@@ -97,9 +97,8 @@ class Boat:
                 print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
                 self.stats.droveto[self.sim.env.now] = self.new_loc.id
+                self.sim.stats.drovefromto[self.id-1][self.old_loc.id-1][self.new_loc.id] += 1
                 self.sim.stats.boat_at_station[self.id-1][self.new_loc.id] += 1
-                #yield self.sim.env.process(self.pickup(10))
-                #yield self.sim.env.process(self.dropoff(10))
                 return distance
             else:
                 print("ERROR Battery:\tCannot drive to any more station. Battery capacity too low.")
@@ -112,6 +111,38 @@ class Boat:
         yield self.sim.env.timeout(time)
         self.battery = self.battery + charge_needed
         self.idle = 1
+
+    def dropoff(self):
+        start = time.time()
+        tobedropped = []
+        for passenger in self.passengers:
+            if passenger.dest == self.location.get_id():
+                tobedropped.append(passenger)
+        dropped = len(tobedropped)
+        for passenger in tobedropped:
+            self.passengers.remove(passenger)
+            actual_delay = (self.sim.env.now - passenger.arrivaltime) - self.sim.map.get_distance_id(passenger.dep, passenger.dest)
+            actual_ratio = (self.sim.env.now - passenger.arrivaltime) / self.sim.map.get_distance_id(passenger.dep,
+                                                                                                     passenger.dest)
+            # promised waiting times for central control
+            if len(passenger.get_best_matches()) > 0:
+                promised_ratio = passenger.score[passenger.get_best_matches()[0]]
+                self.sim.stats.passenger_promise.append(passenger.promised_delay-actual_delay)
+                passenger.set_dropoff(self.sim.env.now, promised_ratio - actual_ratio)
+            self.sim.stats.passenger_processing_ratio.append(actual_ratio)
+            self.sim.stats.dropped_passengers.append(passenger)
+
+        self.stats.droppedoff[self.sim.env.now] = dropped
+
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("DO:%s:\t%i" % (self.id, took))
+        if dropped > 0:
+            yield self.sim.env.timeout(G.DROPOFF_TIMEOUT)
+            if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (
+                self.sim.env.now, str(self), dropped, self.location), end='')
+            print(Style.RESET_ALL)
+        else:
+            yield self.sim.env.timeout(0)
 
     def pickup(self, amount=None, restrictions=None):
         if self.location.get_demand() > 0:
@@ -146,6 +177,7 @@ class Boat:
             if G.debug_passenger:
                 print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
                 print(Style.RESET_ALL)
+
 
     def pickup_selection(self, list):
         had = len(self.passengers)
@@ -219,6 +251,8 @@ class Boat:
 
     def wait_time_insert(self, frm):
         result = self.get_route_insert(self.route, frm)
+        if result == None:
+            return None, 10*99
         if result[0]:
             route = result[1]
         else:
@@ -230,6 +264,8 @@ class Boat:
 
     def drive_time_insert(self, frm, to):
         result = self.get_route_insert(self.route, frm)
+        if result == None:
+            return None, 10*99
         if result[0]:
             route = result[1]
         else:
@@ -237,6 +273,8 @@ class Boat:
         index_frm = route.index(frm)
 
         rest_route = self.get_route_insert(route[index_frm:], to)
+        if rest_route == None:
+            return None, 10*99
 
         index_to  = rest_route[1].index(to) + index_frm
 
@@ -248,6 +286,8 @@ class Boat:
             if route[i] == frm:
                 # frm IN route at position i
                 return False, route
+            if len(route[i:]) < 2:
+                return None
             a = self.sim.map.get_in_between(route[i], route[i+1])[:-1]
             if frm in a:
                 # frm EN route between position (i, i+1)
@@ -262,7 +302,7 @@ class Boat:
             return 0
         time_drive = 0
         for i in range(len(route) - 1):
-            time_drive += self.sim.map.distances[self.sim.map.get_station(route[i])][self.sim.map.get_station(route[i + 1])]
+            time_drive += self.sim.map.get_distance(self.sim.map.get_station(route[i]),self.sim.map.get_station(route[i + 1]))
         return time_drive
 
 
@@ -291,26 +331,6 @@ class Boat:
             if G.debug_passenger: print(
                 "%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
 
-    def dropoff(self):
-        start = time.time()
-        tobedropped = []
-        for passenger in self.passengers:
-            if passenger.dest == self.location.get_id():
-                tobedropped.append(passenger)
-        dropped = len(tobedropped)
-        for passenger in tobedropped:
-            self.passengers.remove(passenger)
-            self.sim.stats.passenger_processing_ratio.append((self.sim.env.now - passenger.arrivaltime) / self.sim.map.get_distance_id(passenger.dep, passenger.dest))
-        self.stats.droppedoff[self.sim.env.now] = dropped
-
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("DO:%s:\t%i" % (self.id, took))
-        if dropped > 0:
-            yield self.sim.env.timeout(G.DROPOFF_TIMEOUT)
-            if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (
-                                        self.sim.env.now, str(self), dropped, self.location), end='')
-            print(Style.RESET_ALL)
-        else: yield self.sim.env.timeout(0)
 
 
     def boarded_destinations(self):

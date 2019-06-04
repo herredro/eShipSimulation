@@ -1,7 +1,7 @@
 import random
 import logging
 import numpy as np
-randomseed = 123
+randomseed = 12
 np.random.seed(randomseed)
 random.seed(randomseed)
 logging.basicConfig(level=logging.ERROR, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
@@ -16,9 +16,10 @@ chargingspeed=10
 CAPACITY = 10
 consumption=1
 ROUTE_LENGHT = 10
-PENALTY_ROUTE_DIVERSION = 1
 
-SIMTIME = 500
+PENALTY_ROUTE_DIVERSION = 1 # needs to be bigger than 1, otherwise reverse effect
+
+SIMTIME = 400
 
 DOCK_TIMEOUT = 5
 PICK_UP_TIMEOUT = 1
@@ -47,7 +48,7 @@ highestdemand = 1 #if not, closest neighbor
 initial_demand = [450, 440, 420, 90, 110, 130, 150]
 initial_demand = [0,0,0,0,0,0,0,0,0,0,0,0]
 
-MAX_ARRIVAL_EXPECT = 2
+MAX_ARRIVAL_EXPECT = 6
 INTERARRIVALTIME = 5
 
 poisson_arrivals_expected = []
@@ -75,8 +76,11 @@ edgeList2 = [[1, 2, 10, 1],
             [9, 1,  5, 1]]
 
 edgeList =     [[1, 2, 10, 1],
+                [3, 1, 20, 1],
+                [2, 1, 10],
                 [2, 3, 15],
-                [3, 1, 20, 1]]
+                [3, 2, 15],
+                [1, 3, 20]]
 
 edgeListL =     [[1, 2, 10, 1],
                 [2, 3, 15],
