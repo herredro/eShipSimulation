@@ -1,11 +1,10 @@
+import Global as G
 import random
-import Network as Map
-import Global as G
-random.seed(G.randomseed)
-from simpy import Resource
 import numpy as np
+
 np.random.seed(G.randomseed)
-import Global as G
+random.seed(G.randomseed)
+
 
 class Passenger:
     count = 0
@@ -41,18 +40,18 @@ class Passenger:
                 best_boats.append(boat)
         return best_boats
 
+
 class Passengers:
     def __init__(self, map, station, stationkeys, seed = None):
-        #Todo set seed
-        #Todo changed for map-input. Need sim-input?
+        # Todo set seed
+        # Todo changed for map-input. Need sim-input?
         self.map = map
         self.station = station.id
-        #Todo List of all Stations (int)
+        # Todo List of all Stations (int)
         self.passengers = []
         self.stationkeys = stationkeys
         self.arrival_expect = random.randint(1, G.MAX_ARRIVAL_EXPECT)
         #self.map.env.process(self.update_poisson())
-
 
     def new(self, arrivaltime=None, dest=None):
         if arrivaltime == None:
@@ -73,8 +72,6 @@ class Passengers:
         while True:
             timestamp = self.map.sim.env.now
             old = len(self.passengers)
-            pois = np.random.poisson(self.arrival_expect)
-            pois = np.random.poisson(G.poisson_arrivals_expected[self.station])
             pois = G.poisson_arrivals[self.station-1][turn]
             self.map.sim.stats.poisson_value_station[self.map.get_station(self.station)][self.map.env.now] = pois
             self.map.sim.stats.poisson_value[self.map.env.now] = pois
@@ -86,16 +83,5 @@ class Passengers:
             timepassed = self.map.sim.env.now - timestamp
             for i in range(timepassed):
                 self.map.sim.stats.waiting_demand.append(len(self.passengers))
-            #print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
+            # print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
             turn += 1
-
-
-
-
-# map = Map.Graph()
-# # Initial Map can be modified in Global.py
-# map.create_inital_map()
-#
-# passengers = Passengers(map)
-# next = passengers.get_new()
-# print(next)

@@ -1,7 +1,6 @@
 import Network as Net
 import Boat as Boat
 from Algorithms import Strategies as Strategies
-import Stats
 
 import Global as G
 from tabulate import tabulate
@@ -36,11 +35,6 @@ class Boats:
                 # Central
                 self.env.process(self.strategy.take(self.boats[boat.id]))
         self.env.run(until=G.SIMTIME)
-
-
-
-
-
 
     # Creates a Boat and adds to boat dict.
     def new_boat(self, loc=G.locaction, bat=G.BATTERY, chsp=G.chargingspeed, cons=G.consumption):

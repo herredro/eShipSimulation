@@ -1,21 +1,19 @@
+import Stats
 import Global as G
-from Algorithms import Strategies
-from Network import Station
+import Algorithms.Strategies as Strat
+
 from colorama import Fore, Back, Style
 import logging
-import Algorithms.Strategies as Strat
-import Stats
 import random
-random.seed(G.randomseed)
-
 import time
 
-
+random.seed(G.randomseed)
 
 
 class Boat:
     # Boat specific variables
     count = 0
+
     def __init__(self, sim, location, battery = 100, capacity = G.CAPACITY, charging_speed = 10, consumption = 1):
         Boat.count+=1
         self.sim = sim
@@ -36,10 +34,9 @@ class Boat:
         self.fill_route_length()
         #self.sim.env.process(self.strat.take())
 
-
         if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
-    #Todo route: Fill up when empty
+    # Todo route: Fill up when empty
     def fill_route_time(self, simtime=G.SIMTIME):
         simtime *= 1.1
         time_needed = 0
@@ -66,9 +63,8 @@ class Boat:
             self.route.append(stations[random_station])
         #self.route.pop(0)
 
-
     def drive(self, stop):
-        #while True:
+        # while True:
             # self.sim.cb.printtime()
             # self.sim.cb.printboatlist()
             # self.sim.map.printmapstate()
@@ -150,7 +146,7 @@ class Boat:
             before = len(self.passengers)
             space_left = self.capacity - len(self.passengers)
             to_be_pickedup = self.strat.pickup_priorities(restrictions)
-            #more, i, new_pas = True, 0, None
+            # more, i, new_pas = True, 0, None
             new_pas, i = [], 0
             while len(new_pas) < space_left:
                 try:
@@ -169,7 +165,7 @@ class Boat:
             else:
                 yield self.sim.env.timeout(0)
             # Todo Stats: update reward to Statss-Class
-            #Stats.boatreward[self]+=after
+            # Stats.boatreward[self]+=after
             if G.debug_passenger:
                 print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
                 print(Style.RESET_ALL)
@@ -177,7 +173,6 @@ class Boat:
             if G.debug_passenger:
                 print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
                 print(Style.RESET_ALL)
-
 
     def pickup_selection(self, list):
         had = len(self.passengers)
@@ -248,7 +243,6 @@ class Boat:
             (self.route[i-1])][self.sim.map.get_station(self.route[i])]
         return time_driv
 
-
     def wait_time_insert(self, frm):
         result = self.get_route_insert(self.route, frm)
         if result == None:
@@ -260,7 +254,6 @@ class Boat:
         index = route.index(frm)
         wait_time = self.time_for_route(route[:index+1])
         return result[0], wait_time
-
 
     def drive_time_insert(self, frm, to):
         result = self.get_route_insert(self.route, frm)
@@ -305,16 +298,11 @@ class Boat:
             time_drive += self.sim.map.get_distance(self.sim.map.get_station(route[i]),self.sim.map.get_station(route[i + 1]))
         return time_drive
 
-
-
-
-
     def drive_stops(self, passenger_loc):
         if passenger_loc in self.route:
             return self.route.index(passenger_loc)
         else:
             return 10*99
-
 
     def pickup_any(self, amount):
         if self.location.get_demand() > 0:
@@ -331,8 +319,6 @@ class Boat:
             if G.debug_passenger: print(
                 "%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
 
-
-
     def boarded_destinations(self):
         destinations = []
         for station in self.sim.map.get_all_stations():
@@ -348,8 +334,6 @@ class Boat:
             if tuple[1] > 0 and tuple[0] not in destinations:
                 destinations.append(tuple[0])
         return destinations
-
-
 
     # Method to check if distance is doable with battery load
     def drivable__battery(self,  distance):
@@ -391,15 +375,9 @@ class Boat:
     def get_charging_speed(self):
         return self.charging_speed
 
-    def toString(self):
+    def to_string(self):
         return print("\t...This is Boat %s with \n\t\tbattery=%s, charging_speed=%s, consumption=%s\n" % (
             self.id, self.battery, self.charging_speed, self.consumption))
-
-    def __str__(self):
-        if self.idle:
-            return (str(self.id)+" @" + str(self.location))
-        else:
-            return (str(self.id) + " (@" + str(self.location)+")")
 
     def __str__(self):
         if self.idle:

@@ -1,11 +1,9 @@
-
-import json
 import Global as G
+import json
 import matplotlib.pyplot as plt
 import statistics as st
 from tabulate import tabulate
 import numpy as np
-
 
 
 class Stats:
@@ -45,7 +43,6 @@ class Stats:
             self.usage_in_time[station][0] = 0
             self.poisson_value_station[station] = {}
 
-
         # Boat
         self.visited_stations = {}
         for boat in self.sim.cb.boats.values():
@@ -67,7 +64,6 @@ class Stats:
                 for k in range(len(self.sim.map.get_all_stations())):
                     self.drovefromto[i][j].append(0)
 
-
         for station in self.sim.map.get_all_stations():
             self.usage_in_time[station] = {}
             for boat in self.sim.cb.boats.values():
@@ -77,12 +73,7 @@ class Stats:
         for run in runs:
             print(run.final_demand)
 
-
-        # Histogram Boats
-        # 1 Boat
-
-
-        #plt.subplots(1, G.NUM_BOATS)
+        # plt.subplots(1, G.NUM_BOATS)
         boatload = []
         f1 = plt.figure(1)
         for run in runs:
@@ -169,7 +160,6 @@ class Stats:
             col += 1
         plt.legend()
 
-
         plt.show()
 
     def analyze_data(self, runs):
@@ -252,10 +242,6 @@ class Stats:
 
 
 
-
-
-
-
 class Stats_Boat:
     def __init__(self, boats):
         self.boats = boats
@@ -281,8 +267,6 @@ class Stats_Boat:
     #         plt.legend()
     #     return plt
 
-
-
     def save_dict(self, dict):
         with open('data.txt', 'w') as outfile:
             json.dump(dict, outfile)
@@ -292,4 +276,3 @@ class Stats_Boat:
             data = json.load(json_file)
         print(type(data))
         print(data)
-

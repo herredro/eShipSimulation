@@ -1,5 +1,4 @@
 import Network
-import Passengers
 import Algorithms.Dijkstra
 import Stats
 import Global as G
@@ -37,7 +36,6 @@ class Strategies:
     def passenger_prio(map, boat):
         boat.strat.update_dest_vals()
 
-
         options = boat.get_location().get_connections()
         closest_tuple = sorted(options.items(), key=lambda x: x[1])
         closest_stop = map.get_station(closest_tuple[0][0])
@@ -52,11 +50,9 @@ class Strategies:
                 max_station = station
         return max_station
 
-
     def max_reward(self, map, boat):
         for station in self.all_stations:
             pass
-
 
 class Decision_Union:
     def __init__(self, sim):
@@ -83,7 +79,6 @@ class Decision_Union:
 
         self.routeempty = [0,0]
 
-
     def take(self, boat):
         while True:
 
@@ -94,9 +89,6 @@ class Decision_Union:
             yield self.sim.env.process(self.pickup(boat))
 
             yield self.sim.env.process(self.drive(boat))
-
-
-
 
     def charge(self, boat):
         start = time.time()
@@ -156,7 +148,6 @@ class Decision_Union:
         yield drive
 
     def dropoff(self, boat):
-
         dropoff = self.sim.env.process(boat.dropoff())
         yield dropoff
 
@@ -188,7 +179,6 @@ class Decision_Union:
         yield pickup
 
     def init_vals(self):
-
         for station in self.map.get_all_stations():
             self.all_stations.append(station)
             self.pass_dest_at_location[station] = []
@@ -272,34 +262,6 @@ class Decision_Union:
                 passenger.set_score(boat, pass_waiting_score*operating_grade_score)
                 print("pw_sc: %f, og_sc: %f, pw*og: %f" %(pass_waiting_score, operating_grade_score, pass_waiting_score*operating_grade_score))
                 calculated += 1
-        #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("passenger_scores:\t%i" % (took))
-
-    def passenger_infoOLD(self):
-        # update open passengers
-        self.passengers_open = []
-        for station in self.all_stations:
-            for passenger in station.passengers.passengers:
-                self.passengers_open.append(passenger)
-        # update boat-passenger scores
-        start = time.time()
-        calculated = 0
-        for passenger in self.passengers_open:
-            for boat in self.boats.values():
-
-
-                drive_time = boat.drive_wait_time(passenger.dep, passenger.dest)
-                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
-                    self.map.get_station(passenger.dest)]
-                pass_waiting_score = float(drive_time / actual_distance)
-                cap_left = (boat.capacity-len(boat.passengers))
-                operating_grade_score = (1/cap_left) if (cap_left > 0) else 99
-                passenger.set_score(boat, pass_waiting_score*operating_grade_score)
-                print("pw_sc: %f, og_sc: %f, pw*og: %f" %(pass_waiting_score, operating_grade_score, pass_waiting_score*operating_grade_score))
-                calculated += 1
-
-
         #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
         took = (time.time() - start) * 1000
         G.log_comptimes.error("passenger_scores:\t%i" % (took))
@@ -421,7 +383,6 @@ class Decision_Union:
         took = (time.time() - start) * 1000
         G.log_comptimes.error("passenger_scores:\t%i" % (took))
 
-
     def sortkey0(self, item):
         return item[0]
 
@@ -434,7 +395,6 @@ class Decision_Anarchy:
         self.boat = boat
         self.move_strategy = Strategies(self.map)
         self.dijk = Algorithms.Dijkstra.Dijk(self.map)
-
 
         self.all_stations = []
         self.pass_dest_at_location = []
@@ -503,7 +463,6 @@ class Decision_Anarchy:
                 if len(charger_infos) == 0:
                     print("ERROR PLANNING: Big Problem. Will sink.")
 
-
             # PU
             if start_restrictions:
                 pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
@@ -517,8 +476,6 @@ class Decision_Anarchy:
             next_station = next(strat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive
-
-
 
     def pickup_priorities(self, restrictions=None):
         self.update_dest_vals()
@@ -546,8 +503,6 @@ class Decision_Anarchy:
             prio[station][0] = total/distance
         prio_sort = sorted(prio, key=self.sortkey0, reverse=True)
         return prio_sort
-
-
 
 
     def evaluate(self):
