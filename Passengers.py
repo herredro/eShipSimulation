@@ -1,9 +1,10 @@
 import random
 import Network as Map
-random.seed(123)
+import Global as G
+random.seed(G.randomseed)
 from simpy import Resource
 import numpy as np
-np.random.seed(123)
+np.random.seed(G.randomseed)
 import Global as G
 
 class Passenger:
@@ -24,14 +25,14 @@ class Passenger:
     def set_score(self, boat, score):
         self.score[boat] = float(score)
 
-    def get_best_score(self):
-        best_boat = None
+    def get_best_matches(self):
+        best_boats = []
         best_score = 10*99
         for boat, score in self.score.items():
             if score < best_score:
                 best_score = score
-                best_boat = boat
-        return best_boat
+                best_boats.append(boat)
+        return best_boats
 
 class Passengers:
     def __init__(self, map, station, stationkeys, seed = None):

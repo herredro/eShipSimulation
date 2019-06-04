@@ -1,8 +1,9 @@
 import random
 import logging
 import numpy as np
-np.random.seed(1233)
-random.seed(1233)
+randomseed = 123
+np.random.seed(randomseed)
+random.seed(randomseed)
 logging.basicConfig(level=logging.ERROR, filemode="w", filename="zim.log", format="%(levelname)s - %(funcName)s - %(message)s\n")
 log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
@@ -10,13 +11,14 @@ log_comptimes = logging.getLogger("Computation_Times")
 #BOAT DEFAULTS
 NUM_BOATS = 4
 locaction=-1
-BATTERY=10000
+BATTERY=100000
 chargingspeed=10
 CAPACITY = 10
 consumption=1
 ROUTE_LENGHT = 10
+PENALTY_ROUTE_DIVERSION = 1
 
-SIMTIME = 100
+SIMTIME = 500
 
 DOCK_TIMEOUT = 5
 PICK_UP_TIMEOUT = 1
@@ -28,6 +30,7 @@ ui_choice = 1
 
 d_charge = 1
 debug_passenger = 1
+d_route_change = 1
 
 #SIMULATION INIT VARIABLES
 startVertex = 1
@@ -42,10 +45,11 @@ highestdemand = 1 #if not, closest neighbor
 
 
 initial_demand = [450, 440, 420, 90, 110, 130, 150]
-initial_demand = [0,0,0,0,0]
+initial_demand = [0,0,0,0,0,0,0,0,0,0,0,0]
 
-MAX_ARRIVAL_EXPECT = 1
-INTERARRIVALTIME = 3
+MAX_ARRIVAL_EXPECT = 2
+INTERARRIVALTIME = 5
+
 poisson_arrivals_expected = []
 for i in range(len(initial_demand)):
     poisson_arrivals_expected.append(random.randint(1, MAX_ARRIVAL_EXPECT))
@@ -74,7 +78,7 @@ edgeList =     [[1, 2, 10, 1],
                 [2, 3, 15],
                 [3, 1, 20, 1]]
 
-edgeListLONG =     [[1, 2, 10, 1],
+edgeListL =     [[1, 2, 10, 1],
                 [2, 3, 15],
                 [3, 4, 15],
                 [4, 5, 15],

@@ -7,6 +7,7 @@ import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
 import Boat
 import matplotlib.pyplot as plt
+import random
 
 
 
@@ -24,8 +25,10 @@ class Simulation:
         # for i in range(100):
         #     self.simpy(i)
         data = []
-        data.append(self.simpy(True))
+        random.seed(G.randomseed)
         data.append(self.simpy(False))
+        random.seed(G.randomseed)
+        data.append(self.simpy(True))
 
         self.pre_process_data(data)
         #self.visualize_data(data)

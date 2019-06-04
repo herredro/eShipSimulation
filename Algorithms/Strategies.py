@@ -153,17 +153,21 @@ class Decision_Union:
         #2 sort by priority
         #3 match demands to all boats
         self.final_picks[boat] = []
-        self.passenger_info()
+        # Todo pickup_improv: passenger_info only for passengers at boat.location !!
+        self.passenger_info(boat.location)
         for passenger in self.passengers_open:
-            if passenger.get_best_score() == None:
+            if passenger.get_best_matches() == []:
                 print("ERROR: Passenger has NO best score for boat")
             if passenger.dep == boat.location.id:
-                if passenger.get_best_score() == boat:
-                    if self.start_restrictions[boat] == True:
-                        if passenger.dest in self.passenger_restrictions:
-                            self.final_picks[boat].append(passenger)
-                    elif boat.drivable(passenger.dep, passenger.dest):
+                if boat in passenger.get_best_matches():
+                    if ((self.start_restrictions[boat] == True and passenger.dest in self.passenger_restrictions)
+                            or boat.drivable(passenger.dep, passenger.dest)):
+                        new_route = boat.get_route_insert(boat.route, passenger.dest)
+                        if new_route[0]:
+                            if G.d_route_change: print("CHANGED ROUTE: %s --> %s" %(boat.route, new_route))
+                            boat.route = new_route[1]
                         self.final_picks[boat].append(passenger)
+
         took = (time.time() - start) * 1000
         G.log_comptimes.error("PU:%s:\t%i" % (boat.id, took))
         pickup = self.sim.env.process(boat.pickup_selection(self.final_picks[boat]))
@@ -258,7 +262,7 @@ class Decision_Union:
         took = (time.time() - start) * 1000
         G.log_comptimes.error("passenger_scores:\t%i" % (took))
 
-    def passenger_info(self):
+    def passenger_infoOLD(self):
         # update open passengers
         self.passengers_open = []
         for station in self.all_stations:
@@ -267,13 +271,8 @@ class Decision_Union:
         # update boat-passenger scores
         start = time.time()
         calculated = 0
-
-
         for passenger in self.passengers_open:
             for boat in self.boats.values():
-
-                time_pu = boat.wait_time(passenger.dep, passenger.dest)
-                time_dr = boat.drive_time(passenger.dep, passenger.dest)
 
 
                 drive_time = boat.drive_wait_time(passenger.dep, passenger.dest)
@@ -288,6 +287,82 @@ class Decision_Union:
 
 
         #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("passenger_scores:\t%i" % (took))
+
+    def passenger_info(self):
+        # update open passengers
+        self.passengers_open = []
+        for station in self.all_stations:
+            for passenger in station.passengers.passengers:
+                self.passengers_open.append(passenger)
+        # update boat-passenger scores
+        start = time.time()
+        calculated = 0
+        for passenger in self.passengers_open:
+            for boat in self.boats.values():
+
+                wait_time = boat.wait_time_insert(passenger.dep)
+                drive_time= boat.drive_time_insert(passenger.dep, passenger.dest)
+                total_time= wait_time[1] + drive_time[1]
+
+                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
+                    self.map.get_station(passenger.dest)]
+                pass_waiting_score = float(total_time / actual_distance)
+
+                cap_left = (boat.capacity-len(boat.passengers))
+                operating_grade_score = (1/cap_left) if (cap_left > 0) else 99
+
+                penalties = 0
+                if wait_time[0]:
+                    penalties += 1
+                if drive_time[0]:
+                    penalties += 1
+                penalty_discount = G.PENALTY_ROUTE_DIVERSION**penalties
+
+                passenger.set_score(boat, pass_waiting_score*penalty_discount)
+
+                calculated += 1
+                #print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
+        #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
+        took = (time.time() - start) * 1000
+        G.log_comptimes.error("passenger_scores:\t%i" % (took))
+
+    def passenger_info(self, location):
+        # update open passengers
+        self.passengers_open = []
+
+        for passenger in location.passengers.passengers:
+            self.passengers_open.append(passenger)
+        # update boat-passenger scores
+        start = time.time()
+        calculated = 0
+        for passenger in self.passengers_open:
+            for boat in self.boats.values():
+
+                wait_time = boat.wait_time_insert(passenger.dep)
+                drive_time = boat.drive_time_insert(passenger.dep, passenger.dest)
+                total_time = wait_time[1] + drive_time[1]
+
+                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
+                    self.map.get_station(passenger.dest)]
+                pass_waiting_score = float(total_time / actual_distance)
+
+                cap_left = (boat.capacity - len(boat.passengers))
+                operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
+
+                penalties = 0
+                if wait_time[0]:
+                    penalties += 1
+                if drive_time[0]:
+                    penalties += 1
+                penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
+
+                passenger.set_score(boat, pass_waiting_score * penalty_discount)
+
+                calculated += 1
+                # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
+        # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
         took = (time.time() - start) * 1000
         G.log_comptimes.error("passenger_scores:\t%i" % (took))
 

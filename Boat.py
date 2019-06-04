@@ -6,7 +6,8 @@ import logging
 import Algorithms.Strategies as Strat
 import Stats
 import random
-random.seed(123)
+random.seed(G.randomseed)
+
 import time
 
 
@@ -96,6 +97,7 @@ class Boat:
                 print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
                 self.stats.droveto[self.sim.env.now] = self.new_loc.id
+                self.sim.stats.boat_at_station[self.id-1][self.new_loc.id] += 1
                 #yield self.sim.env.process(self.pickup(10))
                 #yield self.sim.env.process(self.dropoff(10))
                 return distance
@@ -163,7 +165,7 @@ class Boat:
         else:
             yield self.sim.env.timeout(0)
 
-
+    # Returns distance in (unchanged) route between two integers
     def drive_time_index(self, frm, to):
         if to == -1:
             focus_route = [self.location].extend(self.route[frm:to+1])
@@ -179,9 +181,9 @@ class Boat:
 
         return distance
 
+    # returns drive+wait time in (unchanged) route
     def drive_wait_time(self, frm, to):
         return self.drive_time(frm, to) + self.wait_time(frm, to)
-
     def wait_time(self, frm, to):
         time_wait = 0
         if frm in self.route:
@@ -197,7 +199,6 @@ class Boat:
         for i in range(1, dep_index):
             time_wait += self.sim.map.distances[self.sim.map.get_station(self.route[i - 1])][self.sim.map.get_station(self.route[i])]
         return time_wait
-
     def drive_time(self, frm, to):
         time_driv = 0
         if frm in self.route:
@@ -214,6 +215,57 @@ class Boat:
             time_driv += self.sim.map.distances[self.sim.map.get_station
             (self.route[i-1])][self.sim.map.get_station(self.route[i])]
         return time_driv
+
+
+    def wait_time_insert(self, frm):
+        result = self.get_route_insert(self.route, frm)
+        if result[0]:
+            route = result[1]
+        else:
+            route = self.route
+        index = route.index(frm)
+        wait_time = self.time_for_route(route[:index+1])
+        return result[0], wait_time
+
+
+    def drive_time_insert(self, frm, to):
+        result = self.get_route_insert(self.route, frm)
+        if result[0]:
+            route = result[1]
+        else:
+            route = self.route.copy()
+        index_frm = route.index(frm)
+
+        rest_route = self.get_route_insert(route[index_frm:], to)
+
+        index_to  = rest_route[1].index(to) + index_frm
+
+        drive_time = self.time_for_route(route[index_frm:index_to+1])
+        return rest_route[0], drive_time
+
+    def get_route_insert(self, route, frm):
+        for i in range(len(route)):
+            if route[i] == frm:
+                # frm IN route at position i
+                return False, route
+            a = self.sim.map.get_in_between(route[i], route[i+1])[:-1]
+            if frm in a:
+                # frm EN route between position (i, i+1)
+                new_route = route.copy()
+                new_route.insert(i+1, frm)
+                return True, new_route
+        # frm not even en route. Not possible.
+        return None
+
+    def time_for_route(self, route):
+        if type(route) == int or len(route) == 1:
+            return 0
+        time_drive = 0
+        for i in range(len(route) - 1):
+            time_drive += self.sim.map.distances[self.sim.map.get_station(route[i])][self.sim.map.get_station(route[i + 1])]
+        return time_drive
+
+
 
 
 

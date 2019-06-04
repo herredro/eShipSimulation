@@ -18,6 +18,7 @@ class Graph:
         self.env = sim.env
         self.stations = {}
         self.distances = {}
+        self.between = {}
         self.chargers = {}
         self.num_stations = 0
         self.num_chargers = 0
@@ -31,8 +32,10 @@ class Graph:
         for station in self.stations.values():
             self.distances[station] = {}
         for station_from in self.stations.values():
+            self.between[station_from] = {}
             for station_to in self.stations.values():
                 self.distances[station_from][station_to] = self.get_distance(station_from, station_to)
+                self.between[station_from][station_to] = {}
 
 
     def demand_left(self):
@@ -70,7 +73,8 @@ class Graph:
             i+=1
 
     def update_demand(self):
-        for station in self.stations.values(): pass
+        for station in self.stations.values():
+            pass
 
     def __iter__(self):
         return iter(self.stations.values())
@@ -109,7 +113,12 @@ class Graph:
             logging.error("new location not existing")
             return False
 
-
+    def get_in_between(self, a0, b0):
+        a = self.get_station(a0)
+        b = self.get_station(b0)
+        if self.between[a][b] == {}:
+            self.between[a][b] = self.dijk.run(a0, b0)[1:][1:]
+        return self.between[a][b]
 
     def get_distance(self, a, b):
         if a == b: return 0
@@ -340,7 +349,7 @@ class Charger(Station):
                 # else:
                 #     self.env.process(boat.charge(chargeNeeded))
                 self.energyConsumed += chargeNeeded
-                self.sim.stats.energy_supplied[self]+=chargeNeeded
+
                 yield charge
                 new_battery = boat.get_battery()
                 if G.d_charge:

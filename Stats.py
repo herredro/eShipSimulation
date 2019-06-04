@@ -4,6 +4,7 @@ import Global as G
 import matplotlib.pyplot as plt
 import statistics as st
 from tabulate import tabulate
+import numpy as np
 
 
 
@@ -21,6 +22,7 @@ class Stats:
         self.boat_load = {}
         self.boat_load_raw = []
         self.boat_load_raw_ratio = []
+        self.boat_at_station = []
         # PASSENGERS
         self.passenger_processing_ratio = []
         self.passenger_waiting_time = []
@@ -48,6 +50,11 @@ class Stats:
             self.boat_load_in_time[i] = {}
         for i in range(0, G.CAPACITY+1):
             self.boat_load[i] = 0
+        for i in range(G.NUM_BOATS):
+            self.boat_at_station.append([ "B%s" %str(i+1) ])
+            for j in range(len(self.sim.map.get_all_stations())):
+                self.boat_at_station[i].append(0)
+
 
         for station in self.sim.map.get_all_stations():
             self.usage_in_time[station] = {}
@@ -58,8 +65,6 @@ class Stats:
         for run in runs:
             print(run.final_demand)
 
-        colors = ["blue", "red", "green", "blue"]
-        col = 0
 
         # Histogram Boats
         # 1 Boat
@@ -88,6 +93,28 @@ class Stats:
 
         # Demand Stations
         f3 = plt.figure(3)
+        colors = ["blue", "red", "green", "blue", "black"]
+        col = 0
+        for run in runs:
+            boats = list(run.boat_load_in_time.values())
+            num = 1
+            if run.mode is "Central":
+                line = "dashed"
+            else:
+                line = "dotted"
+
+            for boat in boats:
+                plt.title('boat load over time with %i boats, IAT:%i, MAE:%i' % (
+                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+                plt.plot(boat.keys(), boat.values(), label=run.mode + ": B" + str(num), linestyle=line,
+                         color=colors[num])
+                num += 1
+            col += 1
+        plt.legend()
+
+        f4 = plt.figure(4)
+        colors = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green", "blue"]
+        col = 0
         for run in runs:
             stations = list(run.demand_in_time.values())
             num = 1
@@ -103,9 +130,8 @@ class Stats:
             col += 1
         plt.legend()
 
-        plt.show()
 
-        print(1)
+        plt.show()
 
     def analyze_data(self, runs):
         for run in runs:
@@ -146,8 +172,18 @@ class Stats:
                 tabs.append(tab)
 
             print(run.mode)
+
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
             print("Accured demand summed: %i" %run.accured_demand)
+
+            print("Stations approached per boat in %")
+            for i in range(len(run.boat_at_station)):
+                sum = np.sum(run.boat_at_station[i][1:])
+                for j in range(1, len(run.boat_at_station[0])):
+                    run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
+            print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+            print("\n\n")
+
 
 
 
