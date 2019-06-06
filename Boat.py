@@ -21,6 +21,7 @@ class Boat:
         self.location = location
         self.capacity = capacity
         self.passengers = []
+        # ToDo put this in charger
         self.charging_speed = charging_speed
         self.battery= battery
         self.consumption = consumption

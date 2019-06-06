@@ -13,9 +13,6 @@ class Strategies:
         for station in map.get_all_stations():
             self.all_stations.append(station)
 
-    def run(self):
-        print(">>>ERROR<<<>>>STRATEGY_EMPTY<<<")
-
     @staticmethod
     def closest_neighbor(map, boat):
         options = boat.get_location().get_connections()
@@ -31,16 +28,6 @@ class Strategies:
                 yield next_stop
                 i += 1
 
-
-    @staticmethod
-    def passenger_prio(map, boat):
-        boat.strat.update_dest_vals()
-
-        options = boat.get_location().get_connections()
-        closest_tuple = sorted(options.items(), key=lambda x: x[1])
-        closest_stop = map.get_station(closest_tuple[0][0])
-        return closest_stop
-
     #Todo if occ==cap && next station==curr_stat --> Move somewhere
     @staticmethod
     def highest_demand(map, boat):
@@ -50,9 +37,6 @@ class Strategies:
                 max_station = station
         return max_station
 
-    def max_reward(self, map, boat):
-        for station in self.all_stations:
-            pass
 
 class Decision_Union:
     def __init__(self, sim):
@@ -61,42 +45,37 @@ class Decision_Union:
         self.boats = self.sim.cb.boats
         self.dijk = Algorithms.Dijkstra.Dijk(self.map)
         self.stats = Stats.Stats_Boat(self.boats)
-
-        print(1)
-
+        # Stations
         self.all_stations = []
         self.pass_dest_at_location = {}
         self.pass_dest_boarded = {}
-        self.final_picks = {}
-
+        # Passengers
         self.passengers_open = []
-
+        self.final_picks = {}
+        # Boat
         self.start_restrictions = {}
         self.passenger_restrictions = {}
         self.planned_to_charge_at = {}
         self.charge_now = {}
+        self.route_about_to_get_extended = [0, 0]
         self.init_vals()
-
-        self.routeempty = [0,0]
 
     def take(self, boat):
         while True:
-
+            # Loop for boat actions
             yield self.sim.env.process(self.dropoff(boat))
-
             yield self.sim.env.process(self.charge(boat))
-
             yield self.sim.env.process(self.pickup(boat))
-
             yield self.sim.env.process(self.drive(boat))
 
+    # Charging Algorithm
     def charge(self, boat):
         start = time.time()
         # if self.boat.idle:
         self.update_vals(boat)
         if self.start_restrictions[boat]:
             self.passenger_restrictions[boat] = self.passenger_restrictions[boat][1:]
-            #self.passenger_restrictions[boat] = self.passenger_restrictions[boat][1:]
+
         # POSSIBLE-CHARGERS-EVALUATION
         charger_infos = self.charger_infos(boat)
         pass_dests = boat.get_passenger_destinations()
@@ -118,7 +97,8 @@ class Decision_Union:
         took = (time.time() - start) * 1000
         G.log_comptimes.error("CH:%s:\t%i" % (boat.id, took))
         if self.charge_now[boat]:
-            # if start_restrictions:
+            # Decision taken: Going to charge now
+
             if len(boat.passengers) > 0:
                 print("PROBLEM CHARGE: charging with passengers")
             charged = self.sim.env.process(boat.get_location().serve(boat, G.BATTERY))
@@ -129,18 +109,21 @@ class Decision_Union:
             yield charged
         else:
             if len(charger_infos) == 0:
+                # No chargers left for boat to avoid 0%
                 print("ERROR PLANNING: Big Problem. Will sink.")
 
     def drive(self, boat):
         next_station = None
         start = time.time()
         if len(boat.route) > G.ROUTE_LENGHT:
+            # Route sufficiently long
             next_station = boat.route.pop(0)
-            self.routeempty[0]+=1
+            self.route_about_to_get_extended[0]+=1
         else:
+            # Route not long enough -> fill
             boat.fill_route_length()
             next_station = boat.route.pop(0)
-            self.routeempty[1] += 1
+            self.route_about_to_get_extended[1] += 1
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
         boat.stats.luggage[self.sim.env.now] = len(boat.passengers)
@@ -148,46 +131,54 @@ class Decision_Union:
         yield drive
 
     def dropoff(self, boat):
+        # Drop-off passengers with destination == boat.location. Method implemented in Boat.py
         dropoff = self.sim.env.process(boat.dropoff())
         yield dropoff
 
     def pickup(self, boat):
+        # Pickup Algorithm:
+            #1 get demand at all stations
+            #2 sort by priority
+            #3 match demands to all boats
         start = time.time()
-        #1 get demand at all stations
-        #2 sort by priority
-        #3 match demands to all boats
         self.final_picks[boat] = []
-        # Todo pickup_improv: passenger_info only for passengers at boat.location !!
+
+        # Get scores for all passengers at boats location to know which ones boat shall pick (-->final_picks)
         self.passenger_info(boat)
         for passenger in self.passengers_open:
             if passenger.get_best_matches() == []:
+                # WARNING: Boat has no best match
                 print("ERROR: Passenger has NO best score for boat")
             if passenger.dep == boat.location.id:
+                # Just check that passengers location really is boats location
                 if boat in passenger.get_best_matches():
+                    # Passengers best match is this boat
                     if ((self.start_restrictions[boat] == True and passenger.dest in self.passenger_restrictions)
                             or boat.drivable(passenger.dep, passenger.dest)):
+                        # If boat starts having restrictions (due to battery), passenger.dest needs to be still drivable
+                        # Also, Passenger.dest needs to be drivable with current battery status
                         new_route = boat.get_route_insert(boat.route, passenger.dest)
                         if new_route[0]:
+                            # boat-passenger-scores allow for altered boat-routes. If this is the case, update boats route
                             if G.d_route_change: print("CHANGED ROUTE: %s --> %s" %(boat.route, new_route))
                             boat.route = new_route[1]
                         self.final_picks[boat].append(passenger)
                         passenger.promised_delay = passenger.score[boat]-self.map.get_distance_id(passenger.dep, passenger.dest)
-
         took = (time.time() - start) * 1000
         G.log_comptimes.error("PU:%s:\t%i" % (boat.id, took))
+        # Actual Pickup also, implemented in Boat.py. This method was to define WHAT to pick up
         pickup = self.sim.env.process(boat.pickup_selection(self.final_picks[boat]))
         yield pickup
 
+    # Initialize clean values for decision-making
     def init_vals(self):
         for station in self.map.get_all_stations():
             self.all_stations.append(station)
             self.pass_dest_at_location[station] = []
             for station2 in self.map.get_all_stations():
                 self.pass_dest_at_location[station].append([station2])
-
         for boat in self.boats.values():
             self.final_picks[boat] = []
-
             self.start_restrictions[boat] = False
             self.passenger_restrictions[boat] = None
             self.planned_to_charge_at[boat] = None
@@ -195,7 +186,6 @@ class Decision_Union:
             self.pass_dest_boarded[boat] = []
             for station in self.all_stations:
                 self.pass_dest_boarded[boat].append([station])
-
         for station in self.map.get_all_stations():
             for i in range(len(self.pass_dest_at_location[station])):
                 self.pass_dest_at_location[station][i].append(0)
@@ -203,6 +193,7 @@ class Decision_Union:
                 for i in range(len(self.pass_dest_at_location[station])):
                     self.pass_dest_boarded[boat][i].append(0)
 
+    # Update values for decision-making
     def update_vals(self, boat):
         # Reset values
         for station in self.all_stations:
@@ -222,87 +213,22 @@ class Decision_Union:
                         if passenger.dest == station.id:
                             self.pass_dest_boarded[boat][station.id - 1][1] += 1
 
+    # returns information about reachable possible charging facilities
     def charger_infos(self, boat):
         start = time.time()
         charger_infos = []
         distance = 0
-        # if type(boat.location) == Network.Charger:
-        #     charger_infos.append([0, []])
         for i in range(0, len(boat.route) - 1):
             station = self.map.get_station(boat.route[i])
             if i == 0:
                 distance += self.sim.map.distances[boat.location][station]
-
             else:
                 distance += self.sim.map.distances[self.map.get_station(boat.route[i - 1])][station]
-
             if type(station) == Network.Charger:
                 charger_infos.append([distance, boat.route[:i + 1]])
         took = (time.time() - start) * 1000
         G.log_comptimes.error("charger_infos():\t%i" % (took))
         return charger_infos
-
-    def passenger_infoOLD(self):
-        # update open passengers
-        self.passengers_open = []
-        for station in self.all_stations:
-            for passenger in station.passengers.passengers:
-                self.passengers_open.append(passenger)
-        # update boat-passenger scores
-        start = time.time()
-        calculated = 0
-        for boat in self.boats.values():
-            for passenger in self.passengers_open:
-                drive_time = boat.drive_wait_time(passenger.dep, passenger.dest)
-                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
-                    self.map.get_station(passenger.dest)]
-                pass_waiting_score = float(drive_time / actual_distance)
-                cap_left = (boat.capacity-len(boat.passengers))
-                operating_grade_score = (1/cap_left) if (cap_left > 0) else 99
-                passenger.set_score(boat, pass_waiting_score*operating_grade_score)
-                print("pw_sc: %f, og_sc: %f, pw*og: %f" %(pass_waiting_score, operating_grade_score, pass_waiting_score*operating_grade_score))
-                calculated += 1
-        #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("passenger_scores:\t%i" % (took))
-
-    # def passenger_info(self):
-    #     # update open passengers
-    #     self.passengers_open = []
-    #     for station in self.all_stations:
-    #         for passenger in station.passengers.passengers:
-    #             self.passengers_open.append(passenger)
-    #     # update boat-passenger scores
-    #     start = time.time()
-    #     calculated = 0
-    #     for passenger in self.passengers_open:
-    #         for boat in self.boats.values():
-    #
-    #             wait_time = boat.wait_time_insert(passenger.dep)
-    #             drive_time= boat.drive_time_insert(passenger.dep, passenger.dest)
-    #             total_time= wait_time[1] + drive_time[1]
-    #
-    #             actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
-    #                 self.map.get_station(passenger.dest)]
-    #             pass_waiting_score = float(total_time / actual_distance)
-    #
-    #             cap_left = (boat.capacity-len(boat.passengers))
-    #             operating_grade_score = (1/cap_left) if (cap_left > 0) else 99
-    #
-    #             penalties = 0
-    #             if wait_time[0]:
-    #                 penalties += 1
-    #             if drive_time[0]:
-    #                 penalties += 1
-    #             penalty_discount = G.PENALTY_ROUTE_DIVERSION**penalties
-    #
-    #             passenger.set_score(boat, pass_waiting_score*penalty_discount)
-    #
-    #             calculated += 1
-    #             #print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
-    #     #print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-    #     took = (time.time() - start) * 1000
-    #     G.log_comptimes.error("passenger_scores:\t%i" % (took))
 
     def passenger_info_ratio(self, boat):
         # update open passengers
@@ -315,27 +241,25 @@ class Decision_Union:
         calculated = 0
         for passenger in self.passengers_open:
             for some_boat in self.boats.values():
+                # Calculates pickup_time and drive_time
+                pick_up_time = some_boat.wait_time_insert(passenger.dep)
+                drive_time   = some_boat.drive_time_insert(passenger.dep, passenger.dest)
+                total_time   = pick_up_time[1] + drive_time[1]
 
-                wait_time = some_boat.wait_time_insert(passenger.dep)
-                drive_time = some_boat.drive_time_insert(passenger.dep, passenger.dest)
-                total_time = wait_time[1] + drive_time[1]
-
-                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
-                    self.map.get_station(passenger.dest)]
+                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][self.map.get_station(passenger.dest)]
                 pass_waiting_score = float(total_time / actual_distance)
-
                 cap_left = (some_boat.capacity - len(some_boat.passengers))
                 operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
 
+                # Giving penalties for altered routes. Boolean: "altered" in [0]
                 penalties = 0
-                if wait_time[0]:
+                if pick_up_time[0]:
                     penalties += 1
                 if drive_time[0]:
                     penalties += 1
                 penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
 
                 passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
-
                 calculated += 1
                 # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
             #if boat is not passenger.get_best_matches(): print("present boat not best match")
@@ -399,7 +323,6 @@ class Decision_Anarchy:
         self.all_stations = []
         self.pass_dest_at_location = []
         self.pass_dest_boarded = []
-
         self.planned_route = []
 
         for station in self.map.get_all_stations():
@@ -410,10 +333,8 @@ class Decision_Anarchy:
             self.pass_dest_at_location[i].append(0)
             self.pass_dest_boarded[i].append(0)
 
-
     def take(self):
         strat = self.move_strategy.next_station()
-        #strat = self.move_strategy.max_reward
         start_restrictions = False
         passenger_restrictions = None
         planned_to_charge_at = None
@@ -424,7 +345,7 @@ class Decision_Anarchy:
             yield dropoff
             # if self.boat.idle:
             self.update_dest_vals()
-            if passenger_restrictions != None:
+            if passenger_restrictions is not None:
                 passenger_restrictions = passenger_restrictions[1:]
             loop_size = self.dijk.run(self.boat.location.id, self.boat.location.id)[0][0]
             # POSSIBLE-CHARGERS-EVALUATION
@@ -439,8 +360,7 @@ class Decision_Anarchy:
                 if self.boat.battery > charger_info[0][0]*self.boat.consumption:
                     if all(pas_des in charger_info[1:] for pas_des in pass_dests):
                         doable_distant_chargers.append(charger_info)
-            cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) \
-                          * self.boat.consumption
+            cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) * self.boat.consumption
             if self.boat.location.id == planned_to_charge_at:
                 charge_now = True
             elif at_charger and len(doable_distant_chargers)==0:
@@ -462,7 +382,6 @@ class Decision_Anarchy:
             else:
                 if len(charger_infos) == 0:
                     print("ERROR PLANNING: Big Problem. Will sink.")
-
             # PU
             if start_restrictions:
                 pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
@@ -472,7 +391,6 @@ class Decision_Anarchy:
             yield pickup
             # REGULAR DRIVE
             self.boat.stats.luggage[self.sim.env.now] = len(self.boat.passengers)
-            #next_station = strat(self.map, self.boat)
             next_station = next(strat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive
@@ -480,7 +398,7 @@ class Decision_Anarchy:
     def pickup_priorities(self, restrictions=None):
         self.update_dest_vals()
         prio = []
-        if restrictions != None:
+        if restrictions is not None:
             for i in range(len(restrictions)):
                 station = self.map.get_station(restrictions[i])
                 prio.append([0])
@@ -504,10 +422,6 @@ class Decision_Anarchy:
         prio_sort = sorted(prio, key=self.sortkey0, reverse=True)
         return prio_sort
 
-
-    def evaluate(self):
-        pass
-
     def charge(self, boat):
         self.sim.env.process(boat.location.serve(boat, 100 - boat.battery))
 
@@ -527,7 +441,6 @@ class Decision_Anarchy:
                     if passenger.dest == station.id:
                         self.pass_dest_boarded[station.id-1][1] +=1
 
-
     def charger_infos(self):
         charger_infos = []
         for charger in self.map.chargers.values():
@@ -542,9 +455,5 @@ class Decision_Anarchy:
             charger_dists.append(info[i][0][0])
         return charger_dists
 
-
     def sortkey0(self, item):
         return item[0]
-
-    def sortkey000(self, item):
-        return item[0][0][0]

@@ -19,7 +19,7 @@ ROUTE_LENGHT = 10
 
 PENALTY_ROUTE_DIVERSION = 1 # needs to be bigger than 1, otherwise reverse effect
 
-SIMTIME = 400
+SIMTIME = 40
 
 DOCK_TIMEOUT = 5
 PICK_UP_TIMEOUT = 1
@@ -48,7 +48,7 @@ highestdemand = 1 #if not, closest neighbor
 initial_demand = [450, 440, 420, 90, 110, 130, 150]
 initial_demand = [0,0,0,0,0,0,0,0,0,0,0,0]
 
-MAX_ARRIVAL_EXPECT = 6
+MAX_ARRIVAL_EXPECT = 3
 INTERARRIVALTIME = 5
 
 poisson_arrivals_expected = []

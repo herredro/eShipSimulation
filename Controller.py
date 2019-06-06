@@ -1,8 +1,8 @@
 import Network as Net
 import Boat as Boat
 from Algorithms import Strategies as Strategies
-
 import Global as G
+
 from tabulate import tabulate
 from colorama import Fore, Back, Style
 

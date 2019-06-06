@@ -23,10 +23,10 @@ class Stats:
         self.boat_at_station = []
         self.drovefromto = []
         # PASSENGERS
+        self.dropped_passengers = []
         self.passenger_processing_ratio = []
         self.passenger_waiting_time = []
         self.passenger_promise = []
-        self.dropped_passengers = []
         # MISC
         self.poisson_value_station = {}
         self.poisson_value = {}
@@ -116,11 +116,18 @@ class Stats:
         plt.legend()
 
         # Promised time difference
-        f4 = plt.figure(4)
-        x = np.linspace(0, len(runs[1].passenger_promise)-1, len(runs[1].passenger_promise))
-        plt.title('Delta Passenger promise over time with %i boats, IAT:%i, MAE:%i' % (
+        plt.title('Passenger information over time with %i boats, IAT:%i, MAE:%i' % (
             len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
-        plt.plot(x, runs[1].passenger_promise, 'ro')
+        f4 = plt.figure(4)
+        w = np.linspace(0, len(runs[1].passenger_promise)-1, len(runs[1].passenger_promise))
+        x = np.linspace(0, len(runs[1].passenger_processing_ratio) - 1, len(runs[1].passenger_processing_ratio))
+        y = np.linspace(0, len(runs[1].passenger_waiting_time) - 1, len(runs[1].passenger_waiting_time))
+        z = np.linspace(0, len(runs[1].waiting_demand) - 1, len(runs[1].waiting_demand))
+        plt.plot(w, runs[1].passenger_promise, 'ro', label="Delta Passenger Promise", color=colors[1], alpha=0.5)
+        plt.plot(x, runs[1].passenger_processing_ratio, 'ro', label="Passenger Processing ratio", color=colors[2], alpha=0.5)
+        plt.plot(y, runs[1].passenger_waiting_time, 'ro', label="Passenger Waiting Time", color=colors[3], alpha=0.5)
+        plt.plot(z, runs[1].waiting_demand, 'ro', label="Accrued Demand at Stations", color=colors[4], alpha=0.5)
+        plt.legend()
 
         # New demand over time
         f5 = plt.figure(5)

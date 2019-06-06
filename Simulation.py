@@ -28,7 +28,7 @@ class Simulation:
         random.seed(G.randomseed)
         data.append(self.simpy(True))
 
-        self.pre_process_data(data)
+
         #self.visualize_data(data)
 
         self.stats.analyze_data(data)
