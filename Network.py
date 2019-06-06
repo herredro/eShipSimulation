@@ -1,23 +1,22 @@
-from tabulate import tabulate
-from colorama import Fore, Back, Style
 import Global as G
 import Algorithms.Dijkstra
 import Passengers
-import Stats
+from colorama import Fore, Back, Style
+from tabulate import tabulate
 import logging
 import simpy
-#ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
-
+# ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 
 # Todo Comment
 class Graph:
-    #Graph has list of stations (vertex pbject) and list of chargers (charger object)
+    # Graph has list of stations (vertex pbject) and list of chargers (charger object)
     def __init__(self, sim = None):
         self.sim = sim
         self.env = sim.env
         self.stations = {}
         self.distances = {}
+        self.between = {}
         self.chargers = {}
         self.num_stations = 0
         self.num_chargers = 0
@@ -31,9 +30,10 @@ class Graph:
         for station in self.stations.values():
             self.distances[station] = {}
         for station_from in self.stations.values():
+            self.between[station_from] = {}
             for station_to in self.stations.values():
                 self.distances[station_from][station_to] = self.get_distance(station_from, station_to)
-
+                self.between[station_from][station_to] = {}
 
     def demand_left(self):
         for station in self.stations.values():
@@ -70,7 +70,8 @@ class Graph:
             i+=1
 
     def update_demand(self):
-        for station in self.stations.values(): pass
+        for station in self.stations.values():
+            pass
 
     def __iter__(self):
         return iter(self.stations.values())
@@ -109,7 +110,12 @@ class Graph:
             logging.error("new location not existing")
             return False
 
-
+    def get_in_between(self, a0, b0):
+        a = self.get_station(a0)
+        b = self.get_station(b0)
+        if self.between[a][b] == {}:
+            self.between[a][b] = self.dijk.run(a0, b0)[1:][1:]
+        return self.between[a][b]
 
     def get_distance(self, a, b):
         if a == b: return 0
@@ -137,7 +143,7 @@ class Graph:
                 for y in visitors:
                     mat += "%s" % (y)
                 mat += "]\t"
-        return(mat)
+        return mat
 
     def get_network_tabulate(self):
         stationnames = []
@@ -169,15 +175,10 @@ class Graph:
 
     def printedges_tabulate(self):
         tabs = []
-        # vid = None
-        # wid = None
-        # dis = None
         for v in self.get_all_stations():
             for w in v.get_connections():
                 vid = "S" + str(v.get_id())
                 wid = "S" + str(w)
-                #dis = v.get_dist_fromID(w)
-                #dis = self.get_distance(v, self.get_station_object(w))
                 dis = self.distances[v][self.get_station(w)]
                 tabs.append([vid, wid, dis])
         #print("---------EDGES----------")
@@ -196,15 +197,14 @@ class Station:
         self.boats = []
         self.demand = 0
 
-
     # Method to add an adjacent station
     def add_neighbor(self, neighbor, weight=0):
         self.adjacent[neighbor] = weight
+        print(1)
 
     def init_demand(self, passengers_object):
         self.passengers = passengers_object
         self.sim.env.process(self.passengers.update_poisson())
-
 
     def get_demand(self):
         return len(self.passengers.passengers)
@@ -247,7 +247,6 @@ class Station:
     def remove_demand(amount):
         pass
 
-
     # Return: all adjacent stations as a dictionary
     def get_connections(self):
         return self.adjacent
@@ -258,9 +257,6 @@ class Station:
         if id in self.adjacent:
             return True
         else: return False
-
-
-
 
     # Return: ID of this station
     def get_id(self):
@@ -275,7 +271,6 @@ class Station:
         except KeyError:
             print("CATCH")
 
-
     # Method for station to know a boat has left
     def remove_visitor(self, boat):
         self.boats.remove(boat)
@@ -289,17 +284,11 @@ class Station:
         return self.boats
 
     def __repr__(self):
-        return "S%s" % (str(self.id), self.get_demand())
+        return "S%s" % (str(self.id))
 
     def __str__(self):
         return "S%s:%i" % (str(self.id), self.get_demand())
 
-
-
-    # OLD:
-    #     return 'Station' + str(self.id) + ' has route to: ' \
-    #            + str([x.id for x in self.adjacent]) + ' with distance ' \
-    #            + str([self.get_weight(x) for x in self.adjacent])
 
 class Charger(Station):
 
@@ -340,7 +329,7 @@ class Charger(Station):
                 # else:
                 #     self.env.process(boat.charge(chargeNeeded))
                 self.energyConsumed += chargeNeeded
-                self.sim.stats.energy_supplied[self]+=chargeNeeded
+
                 yield charge
                 new_battery = boat.get_battery()
                 if G.d_charge:
@@ -352,14 +341,12 @@ class Charger(Station):
             else:
                 print("ERROR CHARGER: Charger already occupied")
 
-            #yield self.env.timeout(int(chargeNeeded/boat.charging_speed))
-
+            # yield self.env.timeout(int(chargeNeeded/boat.charging_speed))
 
     # Docking boat to the charger when it is already positioned at Charging Station
     def dock(self, boat):
         self.occupiedBy = boat
         boat.set_location(self)
-
 
     # Undock boat at charger. Boat remains at charger Vertex
     def undock(self):
@@ -367,7 +354,6 @@ class Charger(Station):
             print("ERROR CHARGER: Dock undocking: Dock already Empty")
         else:
             self.occupiedBy = None
-
 
     def __repr__(self):
         return "C%s:%i" % (str(self.id), self.get_demand())

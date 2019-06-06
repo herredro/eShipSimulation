@@ -5,8 +5,7 @@ import Stats
 import Global as G
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
-import Boat
-import matplotlib.pyplot as plt
+import random
 
 
 
@@ -24,10 +23,12 @@ class Simulation:
         # for i in range(100):
         #     self.simpy(i)
         data = []
-        data.append(self.simpy(True))
+        random.seed(G.randomseed)
         data.append(self.simpy(False))
+        random.seed(G.randomseed)
+        data.append(self.simpy(True))
 
-        self.pre_process_data(data)
+
         #self.visualize_data(data)
 
         self.stats.analyze_data(data)
@@ -61,103 +62,6 @@ class Simulation:
             demand_state.append(station.get_demand())
         self.stats.final_demand = demand_state
         return self.stats
-
-    def analyze_data(self, runs):
-        run = runs[0]
-
-        final_demand = {}
-        boat_load = {}
-
-#        final_demand.update(runs.index(run), run.final_demand)
-        boat_load.update()
-
-
-
-
-
-
-
-
-
-    def visualize_data(self, runs):
-        for run in runs:
-            print(run.final_demand)
-
-        colors = ["blue", "red", "green", "blue"]
-        col = 0
-
-        # Histogram Boats
-        # 1 Boat
-
-
-        #plt.subplots(1, G.NUM_BOATS)
-        boatload = []
-        f1 = plt.figure(1)
-        for run in runs:
-            plt.subplot(1,2,runs.index(run)+1)
-            vals = []
-            for load in range(0,G.CAPACITY+1):
-                vals.append(load)
-            plt.bar(run.boat_load.keys(), run.boat_load.values())
-            plt.title("Boat Load in %s" %(run.mode))
-            plt.legend()
-
-        # Histogram
-        f2 = plt.figure(2)
-        for run in runs:
-            plt.subplot(1,2,runs.index(run)+1)
-            vals = []
-            plt.hist(run.passenger_processing_ratio)
-            plt.title("Passenger waiting ratio in %s" %(run.mode))
-            plt.legend()
-
-        # Demand Stations
-        f3 = plt.figure(3)
-        for run in runs:
-            stations = list(run.demand_in_time.values())
-            num = 1
-            if run.mode is "Central":
-                line = "dashed"
-            else:
-                line = "dotted"
-
-            for station in stations:
-                plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' %(len(self.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
-                plt.plot(station.keys(), station.values(), label=run.mode+": S"+str(num), linestyle = line, color=colors[num])
-                num += 1
-            col += 1
-        plt.legend()
-
-        plt.show()
-
-        print(1)
-
-    def pre_process_data(self, runs):
-        pass
-
-    # def visualization_stations(self):
-    #     # STATIONS
-    #     # for station in self.map.get_all_stations():
-    #     #     self.map.stats.plot_step([self.map.stats.usage_in_time[station]])
-    #     print("STATS STATIONS")
-    #
-    #     for station in self.map.stats.energy_supplied:
-    #         print("%s supplied %i units" %(str(station), self.map.stats.energy_supplied[station]))
-    #
-    #     self.fig, self.ax = plt.subplots()
-    #     plt.title("Stations")
-    #     for station in self.map.stats.usage_in_time:
-    #         self.ax.step(self.map.stats.usage_in_time[station].keys(), self.map.stats.usage_in_time[station].values(), label="Station %s"%str(station))
-    #     plt.legend()
-    #
-    #
-    # def visualization_boats(self):
-    #     print("Boat passengers")
-    #     self.fig2, self.ax2 = plt.subplots()
-    #     plt.title("BOATS")
-    #     for boat in self.cb.boats.values():
-    #         self.ax2.step(boat.stats.luggage.keys(), boat.stats.luggage.values(), label="Boat %s" % str(boat))
-    #     plt.legend()
 
 
     def manual(self):

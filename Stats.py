@@ -1,10 +1,9 @@
-
-import json
 import Global as G
+import json
 import matplotlib.pyplot as plt
 import statistics as st
 from tabulate import tabulate
-
+import numpy as np
 
 
 class Stats:
@@ -21,10 +20,15 @@ class Stats:
         self.boat_load = {}
         self.boat_load_raw = []
         self.boat_load_raw_ratio = []
+        self.boat_at_station = []
+        self.drovefromto = []
         # PASSENGERS
+        self.dropped_passengers = []
         self.passenger_processing_ratio = []
         self.passenger_waiting_time = []
+        self.passenger_promise = []
         # MISC
+        self.poisson_value_station = {}
         self.poisson_value = {}
         if sim.mode:
             self.mode = "Central"
@@ -37,17 +41,28 @@ class Stats:
             self.demand_in_time[station][0] = 0
             self.usage_in_time[station] = {}
             self.usage_in_time[station][0] = 0
-            self.poisson_value[station] = {}
+            self.poisson_value_station[station] = {}
+
         # Boat
         self.visited_stations = {}
         for boat in self.sim.cb.boats.values():
             self.visited_stations[boat] = {}
+
             for station in self.sim.map.get_all_stations():
                 self.visited_stations[boat][station] = 0
+
         for i in range(1,G.NUM_BOATS+1):
             self.boat_load_in_time[i] = {}
         for i in range(0, G.CAPACITY+1):
             self.boat_load[i] = 0
+        for i in range(G.NUM_BOATS):
+            self.boat_at_station.append([ "B%s" %str(i+1) ])
+            self.drovefromto.append([])
+            for j in range(len(self.sim.map.get_all_stations())):
+                self.boat_at_station[i].append(0)
+                self.drovefromto[i].append(["S%s"%str(j+1)])
+                for k in range(len(self.sim.map.get_all_stations())):
+                    self.drovefromto[i][j].append(0)
 
         for station in self.sim.map.get_all_stations():
             self.usage_in_time[station] = {}
@@ -58,14 +73,7 @@ class Stats:
         for run in runs:
             print(run.final_demand)
 
-        colors = ["blue", "red", "green", "blue"]
-        col = 0
-
-        # Histogram Boats
-        # 1 Boat
-
-
-        #plt.subplots(1, G.NUM_BOATS)
+        # plt.subplots(1, G.NUM_BOATS)
         boatload = []
         f1 = plt.figure(1)
         for run in runs:
@@ -88,6 +96,60 @@ class Stats:
 
         # Demand Stations
         f3 = plt.figure(3)
+        colors = ["blue", "red", "green", "blue", "black"]
+        col = 0
+        for run in runs:
+            boats = list(run.boat_load_in_time.values())
+            num = 1
+            if run.mode is "Central":
+                line = "dashed"
+            else:
+                line = "dotted"
+
+            for boat in boats:
+                plt.title('boat load over time with %i boats, IAT:%i, MAE:%i' % (
+                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+                plt.plot(boat.keys(), boat.values(), label=run.mode + ": B" + str(num), linestyle=line,
+                         color=colors[num])
+                num += 1
+            col += 1
+        plt.legend()
+
+        # Promised time difference
+        plt.title('Passenger information over time with %i boats, IAT:%i, MAE:%i' % (
+            len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+        f4 = plt.figure(4)
+        w = np.linspace(0, len(runs[1].passenger_promise)-1, len(runs[1].passenger_promise))
+        x = np.linspace(0, len(runs[1].passenger_processing_ratio) - 1, len(runs[1].passenger_processing_ratio))
+        y = np.linspace(0, len(runs[1].passenger_waiting_time) - 1, len(runs[1].passenger_waiting_time))
+        z = np.linspace(0, len(runs[1].waiting_demand) - 1, len(runs[1].waiting_demand))
+        plt.plot(w, runs[1].passenger_promise, 'ro', label="Delta Passenger Promise", color=colors[1], alpha=0.5)
+        plt.plot(x, runs[1].passenger_processing_ratio, 'ro', label="Passenger Processing ratio", color=colors[2], alpha=0.5)
+        plt.plot(y, runs[1].passenger_waiting_time, 'ro', label="Passenger Waiting Time", color=colors[3], alpha=0.5)
+        plt.plot(z, runs[1].waiting_demand, 'ro', label="Accrued Demand at Stations", color=colors[4], alpha=0.5)
+        plt.legend()
+
+        # New demand over time
+        f5 = plt.figure(5)
+        colors = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green", "blue"]
+        col = 0
+        num = 1
+        for run in runs:
+            if run.mode is "Central":
+                line = "dashed"
+            else:
+                line = "dotted"
+            plt.title('New demand over time with %i boats, IAT:%i, MAE:%i' % (
+                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+            plt.plot(run.poisson_value.keys(), run.poisson_value.values(), alpha=0.5, label=run.mode + ": S" + str(num),
+                     linestyle=line,
+                     color=colors[num])
+            num += 1
+        plt.legend()
+
+        f6 = plt.figure(6)
+        colors = ["blue", "red", "green", "blue", "red", "green", "blue", "red", "green", "blue"]
+        col = 0
         for run in runs:
             stations = list(run.demand_in_time.values())
             num = 1
@@ -97,15 +159,15 @@ class Stats:
                 line = "dotted"
 
             for station in stations:
-                plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' %(len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
-                plt.plot(station.keys(), station.values(), label=run.mode+": S"+str(num), linestyle = line, color=colors[num])
+                plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' % (
+                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+                plt.plot(station.keys(), station.values(), label=run.mode + ": S" + str(num), linestyle=line,
+                         color=colors[num])
                 num += 1
             col += 1
         plt.legend()
 
         plt.show()
-
-        print(1)
 
     def analyze_data(self, runs):
         for run in runs:
@@ -146,12 +208,28 @@ class Stats:
                 tabs.append(tab)
 
             print(run.mode)
+
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
             print("Accured demand summed: %i" %run.accured_demand)
+            if run.mode == "Central":
+                mean =  st.mean(run.passenger_promise)
+                median =st.median(run.passenger_promise)
+                pvar = st.pstdev(run.passenger_promise)
+                print("passenger promise failure mean, median, variance: ", mean, median, pvar)
 
+            print("Stations approached per boat in %")
+            for i in range(len(run.boat_at_station)):
+                sum = np.sum(run.boat_at_station[i][1:])
+                for j in range(1, len(run.boat_at_station[0])):
+                    run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
+            print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
 
+            # print("Quantities Boats going from to:")
+            # for i in range(G.NUM_BOATS):
+            #     print("Boat %s" %(i+1))
+            #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
 
-
+            print("\n\n")
 
 
 
@@ -196,8 +274,6 @@ class Stats_Boat:
     #         plt.legend()
     #     return plt
 
-
-
     def save_dict(self, dict):
         with open('data.txt', 'w') as outfile:
             json.dump(dict, outfile)
@@ -207,4 +283,3 @@ class Stats_Boat:
             data = json.load(json_file)
         print(type(data))
         print(data)
-
