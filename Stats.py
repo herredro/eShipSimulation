@@ -26,7 +26,7 @@ class Stats:
         self.dropped_passengers = []
         self.passenger_processing_ratio = []
         self.passenger_waiting_time = []
-        self.passenger_promise = []
+        self.passenger_promise_deficit = []
         # MISC
         self.poisson_value_station = {}
         self.poisson_value = {}
@@ -70,8 +70,10 @@ class Stats:
                 self.usage_in_time[station][boat] = 0
 
     def visualize_data(self, runs):
+        central = None
         for run in runs:
             print(run.final_demand)
+            if run.mode == "Central": central = runs.index(run)
 
         # plt.subplots(1, G.NUM_BOATS)
         boatload = []
@@ -119,14 +121,14 @@ class Stats:
         plt.title('Passenger information over time with %i boats, IAT:%i, MAE:%i' % (
             len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
         f4 = plt.figure(4)
-        w = np.linspace(0, len(runs[1].passenger_promise)-1, len(runs[1].passenger_promise))
-        x = np.linspace(0, len(runs[1].passenger_processing_ratio) - 1, len(runs[1].passenger_processing_ratio))
-        y = np.linspace(0, len(runs[1].passenger_waiting_time) - 1, len(runs[1].passenger_waiting_time))
-        z = np.linspace(0, len(runs[1].waiting_demand) - 1, len(runs[1].waiting_demand))
-        plt.plot(w, runs[1].passenger_promise, 'ro', label="Delta Passenger Promise", color=colors[1], alpha=0.5)
-        plt.plot(x, runs[1].passenger_processing_ratio, 'ro', label="Passenger Processing ratio", color=colors[2], alpha=0.5)
-        plt.plot(y, runs[1].passenger_waiting_time, 'ro', label="Passenger Waiting Time", color=colors[3], alpha=0.5)
-        plt.plot(z, runs[1].waiting_demand, 'ro', label="Accrued Demand at Stations", color=colors[4], alpha=0.5)
+        w = np.linspace(0, len(runs[central].passenger_promise_deficit)-1, len(runs[central].passenger_promise_deficit))
+        x = np.linspace(0, len(runs[central].passenger_processing_ratio) - 1, len(runs[central].passenger_processing_ratio))
+        y = np.linspace(0, len(runs[central].passenger_waiting_time) - 1, len(runs[central].passenger_waiting_time))
+        z = np.linspace(0, len(runs[central].waiting_demand) - 1, len(runs[central].waiting_demand))
+        plt.plot(w, runs[central].passenger_promise_deficit, 'ro', label="Delta Passenger Promise Deficit", color=colors[1], alpha=0.5)
+        plt.plot(x, runs[central].passenger_processing_ratio, 'ro', label="Passenger Processing ratio", color=colors[2], alpha=0.5)
+        plt.plot(y, runs[central].passenger_waiting_time, 'ro', label="Passenger Waiting Time", color=colors[3], alpha=0.5)
+        plt.plot(z, runs[central].waiting_demand, 'ro', label="Accrued Demand at Stations", color=colors[4], alpha=0.5)
         plt.legend()
 
         # New demand over time
@@ -212,9 +214,9 @@ class Stats:
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
             print("Accured demand summed: %i" %run.accured_demand)
             if run.mode == "Central":
-                mean =  st.mean(run.passenger_promise)
-                median =st.median(run.passenger_promise)
-                pvar = st.pstdev(run.passenger_promise)
+                mean =  st.mean(run.passenger_promise_deficit)
+                median =st.median(run.passenger_promise_deficit)
+                pvar = st.pstdev(run.passenger_promise_deficit)
                 print("passenger promise failure mean, median, variance: ", mean, median, pvar)
 
             print("Stations approached per boat in %")

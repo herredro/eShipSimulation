@@ -124,10 +124,11 @@ class Boat:
             # promised waiting times for central control
             if len(passenger.get_best_matches()) > 0:
                 promised_ratio = passenger.score[passenger.get_best_matches()[0]]
-                self.sim.stats.passenger_promise.append(passenger.promised_delay-actual_delay)
+                self.sim.stats.passenger_promise_deficit.append(passenger.promised_delay - actual_delay)
                 passenger.set_dropoff(self.sim.env.now, promised_ratio - actual_ratio)
             self.sim.stats.passenger_processing_ratio.append(actual_ratio)
             self.sim.stats.dropped_passengers.append(passenger)
+            print("passenger%s: promised:%s occured:%s" %(str(passenger.id), passenger.promised_delay, actual_delay))
 
         self.stats.droppedoff[self.sim.env.now] = dropped
 
@@ -251,7 +252,8 @@ class Boat:
         if result[0]:
             route = result[1]
         else:
-            route = self.route
+            route = self.route.copy()
+            route.insert(0, self.location.id)
         index = route.index(frm)
         wait_time = self.time_for_route(route[:index+1])
         return result[0], wait_time

@@ -297,8 +297,8 @@ class Decision_Union:
                 if drive_time[0]:
                     penalties += 1
                 penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
-
-                passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
+                score = pass_waiting_score * penalty_discount
+                passenger.set_score(some_boat, score)
 
                 calculated += 1
                 # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))

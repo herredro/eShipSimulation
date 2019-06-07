@@ -19,7 +19,7 @@ ROUTE_LENGHT = 10
 
 PENALTY_ROUTE_DIVERSION = 1 # needs to be bigger than 1, otherwise reverse effect
 
-SIMTIME = 40
+SIMTIME = 4000
 
 DOCK_TIMEOUT = 5
 PICK_UP_TIMEOUT = 1
@@ -63,7 +63,7 @@ for i in range(len(initial_demand)):
     poisson_arrivals.append(station)
 
 
-
+d_p_num = 134
 
 
 # to add edge, use: [x, y, z],
