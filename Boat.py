@@ -62,7 +62,7 @@ class Boat:
             while stations[random_station] == self.route[-1]:
                 random_station = random.randint(0, len(stations) - 1)
             self.route.append(stations[random_station])
-        #self.route.pop(0)
+        self.route.pop(0)
 
     def drive(self, stop):
         # while True:
@@ -84,12 +84,14 @@ class Boat:
                 logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
                 print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s   \tDRIVING⚡%i%% @%s" % (self.sim.env.now, str(self), self.battery, str(stop)), end='')
                 print(Style.RESET_ALL)
+
                 self.old_loc.remove_visitor(self)
                 self.set_location(self.new_loc)
                 self.discharge(distance)
                 yield self.sim.env.timeout(distance+G.DOCK_TIMEOUT)
                 self.new_loc.add_visitor(self)
                 self.idle = 1
+
                 logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
                 print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
@@ -110,6 +112,7 @@ class Boat:
         self.idle = 1
 
     def dropoff(self):
+        zim_time = self.sim.env.now
         start = time.time()
         tobedropped = []
         for passenger in self.passengers:
@@ -126,9 +129,9 @@ class Boat:
                 promised_ratio = passenger.score[passenger.get_best_matches()[0]]
                 self.sim.stats.passenger_promise_deficit.append(passenger.promised_delay - actual_delay)
                 passenger.set_dropoff(self.sim.env.now, promised_ratio - actual_ratio)
-            self.sim.stats.passenger_processing_ratio.append(actual_ratio)
+            self.sim.stats.passenger_processing_delay.append(actual_delay)
             self.sim.stats.dropped_passengers.append(passenger)
-            print("passenger%s: promised:%s occured:%s" %(str(passenger.id), passenger.promised_delay, actual_delay))
+            print("delay passenger%s: promised:%s occured:%s" %(str(passenger.id), passenger.promised_delay, actual_delay))
 
         self.stats.droppedoff[self.sim.env.now] = dropped
 
@@ -177,11 +180,13 @@ class Boat:
                 print(Style.RESET_ALL)
 
     def pickup_selection(self, list):
+        zim_time = self.sim.env.now
         had = len(self.passengers)
         got = 0
         for passenger in list:
             if len(self.passengers) < self.capacity:
                 self.passengers.append(passenger)
+                passenger.promised_delay = passenger.score[self]
                 self.location.passengers.passengers.remove(passenger)
                 self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.arrivaltime)
                 got +=1
@@ -246,26 +251,26 @@ class Boat:
         return time_driv
 
     def wait_time_insert(self, frm):
-        result = self.get_route_insert(self.route, frm)
+        route = self.route.copy()
+        route.insert(0, self.location.id)
+        result = self.get_route_insert(route, frm)
         if result == None:
             return None, 10*99
         if result[0]:
             route = result[1]
-        else:
-            route = self.route.copy()
-            route.insert(0, self.location.id)
+            # ToDo route wait time needs inserting location, too?
         index = route.index(frm)
         wait_time = self.time_for_route(route[:index+1])
         return result[0], wait_time
 
     def drive_time_insert(self, frm, to):
-        result = self.get_route_insert(self.route, frm)
+        route = self.route.copy()
+        route.insert(0, self.location.id)
+        result = self.get_route_insert(route, frm)
         if result == None:
             return None, 10*99
         if result[0]:
             route = result[1]
-        else:
-            route = self.route.copy()
         index_frm = route.index(frm)
 
         rest_route = self.get_route_insert(route[index_frm:], to)
@@ -284,7 +289,9 @@ class Boat:
                 return False, route
             if len(route[i:]) < 2:
                 return None
-            a = self.sim.map.get_in_between(route[i], route[i+1])[:-1]
+            a = self.sim.map.get_in_between(route[i], route[i+1])
+            if a == None:
+                break
             if frm in a:
                 # frm EN route between position (i, i+1)
                 new_route = route.copy()

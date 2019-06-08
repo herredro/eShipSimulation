@@ -146,15 +146,15 @@ class Boats:
 
 
 
-    # OLD MOVEMENTS WITHOUT SIMPY
-    def fleet_move_demand(self, strategy, pu_quant, do_quant):
-        for boat in self.boats.values():
-            nextstation = strategy(self.map, boat)
-            boat.take(nextstation)
-            boat.pickup_priorities(pu_quant)
-            boat.dropoff(do_quant)
-            self.map.update_demands()
-            self.map.printmapstate()
+    # # OLD MOVEMENTS WITHOUT SIMPY
+    # def fleet_move_demand(self, strategy, pu_quant, do_quant):
+    #     for boat in self.boats.values():
+    #         nextstation = strategy(self.map, boat)
+    #         boat.take(nextstation)
+    #         boat.pickup_priorities(pu_quant)
+    #         boat.dropoff(do_quant)
+    #         self.map.update_demands()
+    #         self.map.printmapstate()
 
     # Method (loop) that asks user which boat to move
     #Todo Q: Uses demand?
@@ -176,66 +176,66 @@ class Boats:
                 print("ERROR: wrong input (choosing boat)\n")
                 self.move_boat__input()
 
-    # Method (loop) that asks user where to move to or charge a given boat
-    def move_station__input(self, boat):
-        print("\n\n\n\n")
-        self.printboatlist()
-        self.map.printmapstate()
-        print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: "
-              %(boat.get_id(), boat.get_battery(), boat.get_location().get_id())
-              + str(boat.get_location().get_connections()) + ", {station: distance}")
-
-
-        choice = input("Enter Strategy:\n"
-                       "1-9 = Station X\n"
-                       "c\t= closest_station\n"
-                       "h\t= highest_demand\n\n"
-                       "p\t= pick up passengers\n"
-                       "d\t= drop off passengers\n"
-                       "e\t= charge\n"
-                       "x\t= cancel. Your input: ")
-        # Choice: Move to closest station.
-        if choice == "c":
-            to = Strategies.Strategies.closest_neighbor(self.map, boat)
-            boat.take(to)
-            self.move_station__input(boat)
-        # Choice: Cancel.
-        elif choice == "h":
-            to = Strategies.Strategies.highest_demand(self.map, boat)
-            boat.take(to)
-            self.move_station__input(boat)
-        elif choice == "p":
-            amount = input("\nHow many passengers to pick up? ")
-            boat.pickup_priorities(amount)
-            self.move_station__input(boat)
-        elif choice == "d":
-            amount = input("\nHow many passengers to drop off? ")
-            boat.dropoff(amount)
-            self.move_station__input(boat)
-        elif choice == "x":
-            print("CANCELED\n")
-            self.move_boat__input()
-        # Choice: Charge.
-        elif choice == "e":
-            if type(boat.get_location()) == Net.Charger:
-                duration = input("How long should boat charge? (type 'max' for full charge)")
-                if duration == "max":
-                    boat.get_location().serve(boat, -1)
-                else:
-                    boat.get_location().serve(boat, int(duration))
-                self.move_station__input(boat)
-            else:
-                print("ERROR CHARGE: Boat not at charger")
-                self.move_station__input(boat)
-        # Choice: Move to specific Station.
-        else:
-            # Check if user-specified location is in range (i.e. edge existing)
-            try:
-                choice_int = int(choice)
-                to = self.map.get_station(choice_int)
-                #self.drive(boat, to)
-                boat.take(to)
-                self.move_station__input(boat)
-            except Exception:
-                print("ERROR: wrong input for location\n")
-                self.move_station__input(boat)
+    # # Method (loop) that asks user where to move to or charge a given boat
+    # def move_station__input(self, boat):
+    #     print("\n\n\n\n")
+    #     self.printboatlist()
+    #     self.map.printmapstate()
+    #     print("Enter next station for %s(%s%%) at S%s. Adjacent stations are: "
+    #           %(boat.get_id(), boat.get_battery(), boat.get_location().get_id())
+    #           + str(boat.get_location().get_connections()) + ", {station: distance}")
+    #
+    #
+    #     choice = input("Enter Strategy:\n"
+    #                    "1-9 = Station X\n"
+    #                    "c\t= closest_station\n"
+    #                    "h\t= highest_demand\n\n"
+    #                    "p\t= pick up passengers\n"
+    #                    "d\t= drop off passengers\n"
+    #                    "e\t= charge\n"
+    #                    "x\t= cancel. Your input: ")
+    #     # Choice: Move to closest station.
+    #     if choice == "c":
+    #         to = Strategies.Strategies.closest_neighbor(self.map, boat)
+    #         boat.take(to)
+    #         self.move_station__input(boat)
+    #     # Choice: Cancel.
+    #     elif choice == "h":
+    #         to = Strategies.Strategies.highest_demand(self.map, boat)
+    #         boat.take(to)
+    #         self.move_station__input(boat)
+    #     elif choice == "p":
+    #         amount = input("\nHow many passengers to pick up? ")
+    #         boat.pickup_priorities(amount)
+    #         self.move_station__input(boat)
+    #     elif choice == "d":
+    #         amount = input("\nHow many passengers to drop off? ")
+    #         boat.dropoff(amount)
+    #         self.move_station__input(boat)
+    #     elif choice == "x":
+    #         print("CANCELED\n")
+    #         self.move_boat__input()
+    #     # Choice: Charge.
+    #     elif choice == "e":
+    #         if type(boat.get_location()) == Net.Charger:
+    #             duration = input("How long should boat charge? (type 'max' for full charge)")
+    #             if duration == "max":
+    #                 boat.get_location().serve(boat, -1)
+    #             else:
+    #                 boat.get_location().serve(boat, int(duration))
+    #             self.move_station__input(boat)
+    #         else:
+    #             print("ERROR CHARGE: Boat not at charger")
+    #             self.move_station__input(boat)
+    #     # Choice: Move to specific Station.
+    #     else:
+    #         # Check if user-specified location is in range (i.e. edge existing)
+    #         try:
+    #             choice_int = int(choice)
+    #             to = self.map.get_station(choice_int)
+    #             #self.drive(boat, to)
+    #             boat.take(to)
+    #             self.move_station__input(boat)
+    #         except Exception:
+    #             print("ERROR: wrong input for location\n")
+    #             self.move_station__input(boat)

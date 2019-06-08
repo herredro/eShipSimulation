@@ -64,7 +64,7 @@ class Decision_Union:
         while True:
             # Loop for boat actions
             yield self.sim.env.process(self.dropoff(boat))
-            yield self.sim.env.process(self.charge(boat))
+            #yield self.sim.env.process(self.charge(boat))
             yield self.sim.env.process(self.pickup(boat))
             yield self.sim.env.process(self.drive(boat))
 
@@ -141,32 +141,41 @@ class Decision_Union:
             #2 sort by priority
             #3 match demands to all boats
         start = time.time()
+        zim_time=self.sim.env.now
         self.final_picks[boat] = []
 
         # Get scores for all passengers at boats location to know which ones boat shall pick (-->final_picks)
         self.passenger_info(boat)
+        a = False
+        remaining_capactiy = boat.capacity - len(boat.passengers)
         for passenger in self.passengers_open:
-            if passenger.get_best_matches() == []:
-                # WARNING: Boat has no best match
-                print("ERROR: Passenger has NO best score for boat")
-            if passenger.dep == boat.location.id:
-                # Just check that passengers location really is boats location
-                if boat in passenger.get_best_matches():
-                    # Passengers best match is this boat
-                    if ((self.start_restrictions[boat] == True and passenger.dest in self.passenger_restrictions)
-                            or boat.drivable(passenger.dep, passenger.dest)):
-                        # If boat starts having restrictions (due to battery), passenger.dest needs to be still drivable
-                        # Also, Passenger.dest needs to be drivable with current battery status
-                        new_route = boat.get_route_insert(boat.route, passenger.dest)
-                        if new_route[0]:
-                            # boat-passenger-scores allow for altered boat-routes. If this is the case, update boats route
-                            if G.d_route_change: print("CHANGED ROUTE: %s --> %s" %(boat.route, new_route))
-                            boat.route = new_route[1]
-                        self.final_picks[boat].append(passenger)
-                        passenger.promised_delay = passenger.score[boat]-self.map.get_distance_id(passenger.dep, passenger.dest)
+            if (len(self.final_picks[boat]) < remaining_capactiy):
+                if passenger.get_best_matches() == []:
+                    # WARNING: Boat has no best match
+                    print("ERROR: Passenger has NO best score for boat")
+                if passenger.dep == boat.location.id:
+                    # Just check that passengers location really is boats location
+                    if boat in passenger.get_best_matches():
+                        # Passengers best match is this boat
+                        if ((self.start_restrictions[boat] == True and passenger.dest in self.passenger_restrictions)
+                                or boat.drivable(passenger.dep, passenger.dest)):
+                            # If boat starts having restrictions (due to battery), passenger.dest needs to be still drivable
+                            # Also, Passenger.dest needs to be drivable with current battery status
+                            new_route = boat.get_route_insert(boat.route, passenger.dest)
+                            if new_route == None:
+                                break
+                            elif new_route[0]:
+                                # boat-passenger-scores allow for altered boat-routes. If this is the case, update boats route
+                                if G.d_route_change: print("CHANGED ROUTE: %s --> %s" %(boat.route, new_route))
+                                boat.route = new_route[1]
+
+                            self.final_picks[boat].append(passenger)
+
+                            if passenger.id == G.d_p_num: a = True
         took = (time.time() - start) * 1000
         G.log_comptimes.error("PU:%s:\t%i" % (boat.id, took))
         # Actual Pickup also, implemented in Boat.py. This method was to define WHAT to pick up
+
         pickup = self.sim.env.process(boat.pickup_selection(self.final_picks[boat]))
         yield pickup
 
@@ -230,42 +239,42 @@ class Decision_Union:
         G.log_comptimes.error("charger_infos():\t%i" % (took))
         return charger_infos
 
-    def passenger_info_ratio(self, boat):
-        # update open passengers
-        self.passengers_open = []
-
-        for passenger in boat.location.passengers.passengers:
-            self.passengers_open.append(passenger)
-        # update boat-passenger scores
-        start = time.time()
-        calculated = 0
-        for passenger in self.passengers_open:
-            for some_boat in self.boats.values():
-                # Calculates pickup_time and drive_time
-                pick_up_time = some_boat.wait_time_insert(passenger.dep)
-                drive_time   = some_boat.drive_time_insert(passenger.dep, passenger.dest)
-                total_time   = pick_up_time[1] + drive_time[1]
-
-                actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][self.map.get_station(passenger.dest)]
-                pass_waiting_score = float(total_time / actual_distance)
-                cap_left = (some_boat.capacity - len(some_boat.passengers))
-                operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
-
-                # Giving penalties for altered routes. Boolean: "altered" in [0]
-                penalties = 0
-                if pick_up_time[0]:
-                    penalties += 1
-                if drive_time[0]:
-                    penalties += 1
-                penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
-
-                passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
-                calculated += 1
-                # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
-            #if boat is not passenger.get_best_matches(): print("present boat not best match")
-        # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("passenger_scores:\t%i" % (took))
+    # def passenger_info_ratio(self, boat):
+    #     # update open passengers
+    #     self.passengers_open = []
+    #
+    #     for passenger in boat.location.passengers.passengers:
+    #         self.passengers_open.append(passenger)
+    #     # update boat-passenger scores
+    #     start = time.time()
+    #     calculated = 0
+    #     for passenger in self.passengers_open:
+    #         for some_boat in self.boats.values():
+    #             # Calculates pickup_time and drive_time
+    #             pick_up_time = some_boat.wait_time_insert(passenger.dep)
+    #             drive_time   = some_boat.drive_time_insert(passenger.dep, passenger.dest)
+    #             total_time   = pick_up_time[1] + drive_time[1]
+    #
+    #             actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][self.map.get_station(passenger.dest)]
+    #             pass_waiting_score = float(total_time / actual_distance)
+    #             cap_left = (some_boat.capacity - len(some_boat.passengers))
+    #             operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
+    #
+    #             # Giving penalties for altered routes. Boolean: "altered" in [0]
+    #             penalties = 0
+    #             if pick_up_time[0]:
+    #                 penalties += 1
+    #             if drive_time[0]:
+    #                 penalties += 1
+    #             penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
+    #
+    #             passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
+    #             calculated += 1
+    #             # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
+    #         #if boat is not passenger.get_best_matches(): print("present boat not best match")
+    #     # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
+    #     took = (time.time() - start) * 1000
+    #     G.log_comptimes.error("passenger_scores:\t%i" % (took))
 
     def passenger_info(self, boat):
         # update open passengers
@@ -278,15 +287,15 @@ class Decision_Union:
         calculated = 0
         for passenger in self.passengers_open:
             for some_boat in self.boats.values():
-
-                wait_time = some_boat.wait_time_insert(passenger.dep)
+                wait_time_now = some_boat.wait_time_insert(passenger.dep)
+                wait_time = [wait_time_now[0], wait_time_now[1] + (self.sim.env.now - passenger.arrivaltime)]
                 drive_time = some_boat.drive_time_insert(passenger.dep, passenger.dest)
                 total_time = wait_time[1] + drive_time[1]
 
                 actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][
                     self.map.get_station(passenger.dest)]
-                pass_waiting_score = float(total_time / actual_distance)
-                pass_waiting_score = total_time
+                pass_waiting_score = float(total_time - actual_distance)
+
 
                 cap_left = (some_boat.capacity - len(some_boat.passengers))
                 operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
@@ -348,40 +357,40 @@ class Decision_Anarchy:
             if passenger_restrictions is not None:
                 passenger_restrictions = passenger_restrictions[1:]
             loop_size = self.dijk.run(self.boat.location.id, self.boat.location.id)[0][0]
-            # POSSIBLE-CHARGERS-EVALUATION
-            charger_infos = self.charger_infos()
-            # BOOLEANS
-            at_charger = type(self.boat.location) == Network.Charger
-            bat_low = self.boat.battery < 30
-            pass_dests = self.boat.get_passenger_destinations()
-            # keep if reachable and can drop passengers on the way
-            doable_distant_chargers = []
-            for charger_info in charger_infos:
-                if self.boat.battery > charger_info[0][0]*self.boat.consumption:
-                    if all(pas_des in charger_info[1:] for pas_des in pass_dests):
-                        doable_distant_chargers.append(charger_info)
-            cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) * self.boat.consumption
-            if self.boat.location.id == planned_to_charge_at:
-                charge_now = True
-            elif at_charger and len(doable_distant_chargers)==0:
-                charge_now = True
-            elif (not at_charger) and cannot_loop:
-                start_restrictions = True
-                planned_to_charge_at = doable_distant_chargers[-1][-1]
-                passenger_restrictions = doable_distant_chargers[-1][2:]
-            if charge_now:
-                #if start_restrictions:
-                    if len(self.boat.passengers)>0:
-                        print("PROBLEM CHARGE: charging with passengers")
-                    charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
-                    charge_now = False
-                    planned_to_charge_at = None
-                    start_restrictions = False
-                    passenger_restrictions = None
-                    yield charged
-            else:
-                if len(charger_infos) == 0:
-                    print("ERROR PLANNING: Big Problem. Will sink.")
+            # # POSSIBLE-CHARGERS-EVALUATION
+            # charger_infos = self.charger_infos()
+            # # BOOLEANS
+            # at_charger = type(self.boat.location) == Network.Charger
+            # bat_low = self.boat.battery < 30
+            # pass_dests = self.boat.get_passenger_destinations()
+            # # keep if reachable and can drop passengers on the way
+            # doable_distant_chargers = []
+            # for charger_info in charger_infos:
+            #     if self.boat.battery > charger_info[0][0]*self.boat.consumption:
+            #         if all(pas_des in charger_info[1:] for pas_des in pass_dests):
+            #             doable_distant_chargers.append(charger_info)
+            # cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) * self.boat.consumption
+            # if self.boat.location.id == planned_to_charge_at:
+            #     charge_now = True
+            # elif at_charger and len(doable_distant_chargers)==0:
+            #     charge_now = True
+            # elif (not at_charger) and cannot_loop:
+            #     start_restrictions = True
+            #     planned_to_charge_at = doable_distant_chargers[-1][-1]
+            #     passenger_restrictions = doable_distant_chargers[-1][2:]
+            # if charge_now:
+            #     #if start_restrictions:
+            #         if len(self.boat.passengers)>0:
+            #             print("PROBLEM CHARGE: charging with passengers")
+            #         charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
+            #         charge_now = False
+            #         planned_to_charge_at = None
+            #         start_restrictions = False
+            #         passenger_restrictions = None
+            #         #yield charged
+            # else:
+            #     if len(charger_infos) == 0:
+            #         print("ERROR PLANNING: Big Problem. Will sink.")
             # PU
             if start_restrictions:
                 pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
@@ -418,6 +427,7 @@ class Decision_Anarchy:
             if distance == 0:
                 distance = self.dijk.run(self.pass_dest_boarded[station][0].id,
                                          self.boat.location.id)[0][0]
+                if distance == 0: distance = 1
             prio[station][0] = total/distance
         prio_sort = sorted(prio, key=self.sortkey0, reverse=True)
         return prio_sort

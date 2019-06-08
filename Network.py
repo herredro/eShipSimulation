@@ -41,6 +41,9 @@ class Graph:
                 return True
         return False
 
+
+
+
     # Todo Demand: needs to be drawn from distribution
     def create_map(self, edgeList=G.edgeList):
         for i in edgeList:
@@ -114,7 +117,13 @@ class Graph:
         a = self.get_station(a0)
         b = self.get_station(b0)
         if self.between[a][b] == {}:
-            self.between[a][b] = self.dijk.run(a0, b0)[1:][1:]
+            between = self.dijk.run(a0, b0)[1:][1:-1]
+            if len(between ) > 1:
+                print("IN BETWEEENN PROOOOOOOOBELMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
+            elif between == []:
+                self.between[a][b] = None
+            else:
+                self.between[a][b] = between
         return self.between[a][b]
 
     def get_distance(self, a, b):

@@ -31,7 +31,7 @@ class Passenger:
 
     def get_best_matches(self):
         best_boats = []
-        best_score = 10*99
+        best_score = 10**99
         for boat, score in self.score.items():
             if score < best_score:
                 best_score = score

@@ -8,6 +8,8 @@ class Dijk():
         self.map = map
 
     def run(self, frm, to):
+        if frm == to:
+            return[[0],frm]
         self.openList = []
         self.closedList = []
         self.debug = False
