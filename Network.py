@@ -41,6 +41,9 @@ class Graph:
                 return True
         return False
 
+
+
+
     # Todo Demand: needs to be drawn from distribution
     def create_map(self, edgeList=G.edgeList):
         for i in edgeList:
@@ -73,6 +76,17 @@ class Graph:
         for station in self.stations.values():
             pass
 
+    def demand_left(self, station = False):
+        if station is False:
+            for station in self.stations:
+                if len(station.passengers.passengers) > 1:
+                    return True
+            return False
+        else:
+            if len(station.passengers.passengers) > 1:
+                return True
+            return False
+
     def __iter__(self):
         return iter(self.stations.values())
 
@@ -82,6 +96,7 @@ class Graph:
         if to not in self.stations:
             self.add_station(to)
         self.stations[frm].add_neighbor(to, cost)
+        self.stations[to].add_neighbor(frm, cost)
 
     # Todo Maybe: move to Controller?
     def add_station(self, node):
@@ -114,7 +129,13 @@ class Graph:
         a = self.get_station(a0)
         b = self.get_station(b0)
         if self.between[a][b] == {}:
-            self.between[a][b] = self.dijk.run(a0, b0)[1:][1:]
+            between = self.dijk.run(a0, b0)[1:][1:-1]
+            if len(between ) > 1:
+                print("IN BETWEEENN PROOOOOOOOBELMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
+            elif between == []:
+                self.between[a][b] = None
+            else:
+                self.between[a][b] = between
         return self.between[a][b]
 
     def get_distance(self, a, b):
@@ -356,7 +377,7 @@ class Charger(Station):
             self.occupiedBy = None
 
     def __repr__(self):
-        return "C%s:%i" % (str(self.id), self.get_demand())
+        return "C%s" % (str(self.id))
 
     def __str__(self):
         return "C%s:%i" % (str(self.id), self.get_demand())

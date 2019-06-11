@@ -9,21 +9,21 @@ log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
-NUM_BOATS = 4
+NUM_BOATS = 5
 locaction=-1
 BATTERY=100000
 chargingspeed=10
-CAPACITY = 10
+CAPACITY = 50
 consumption=1
 ROUTE_LENGHT = 10
 
-PENALTY_ROUTE_DIVERSION = 1 # needs to be bigger than 1, otherwise reverse effect
+PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effect
 
-SIMTIME = 4000
+SIMTIME = 5000
 
-DOCK_TIMEOUT = 5
-PICK_UP_TIMEOUT = 1
-DROPOFF_TIMEOUT = 1
+DOCK_TIMEOUT = 0
+PICK_UP_TIMEOUT = 0
+DROPOFF_TIMEOUT = 0
 
 debug = 1
 simpy = 1
@@ -45,11 +45,11 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [450, 440, 420, 90, 110, 130, 150]
-initial_demand = [0,0,0,0,0,0,0,0,0,0,0,0]
+#initial_demand = [450, 440, 420, 90, 110, 130, 150]
+initial_demand = [0,0,0,0,0,0,0]
 
-MAX_ARRIVAL_EXPECT = 3
-INTERARRIVALTIME = 5
+MAX_ARRIVAL_EXPECT = 7
+INTERARRIVALTIME = 2
 
 poisson_arrivals_expected = []
 for i in range(len(initial_demand)):
@@ -63,7 +63,7 @@ for i in range(len(initial_demand)):
     poisson_arrivals.append(station)
 
 
-d_p_num = 134
+d_p_num = 534
 
 
 # to add edge, use: [x, y, z],
@@ -76,19 +76,23 @@ edgeList2 = [[1, 2, 10, 1],
             [9, 1,  5, 1]]
 
 edgeList =     [[1, 2, 10, 1],
-                [3, 1, 20, 1],
-                [2, 1, 10],
-                [2, 3, 15],
-                [3, 2, 15],
-                [1, 3, 20]]
+                [2, 3, 20],
+                [3, 4, 30],
+                [4, 5, 80],
+                [5, 6, 50],
+                [6, 1, 60]]
 
-edgeListL =     [[1, 2, 10, 1],
-                [2, 3, 15],
-                [3, 4, 15],
-                [4, 5, 15],
-                [5, 6, 15, 1],
-                [6, 7, 15],
-                [7, 1, 20]]
+edgeList =     [[1, 2, 10, 1],
+                [2, 3, 20],
+                [3, 1, 60]]
+
+edgeList3 =     [[1, 2, 10, 1],
+                 [3, 4, 30],
+                 [2, 3, 20],
+                 [3, 2, 20],
+                 [4, 3, 30],
+                 [4, 1, 40],
+                 [1, 4, 40]]
 
 edgeListFork = [[1, 2, 10, 1],
             [1, 3, 50],

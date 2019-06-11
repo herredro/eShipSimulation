@@ -24,7 +24,7 @@ class Stats:
         self.drovefromto = []
         # PASSENGERS
         self.dropped_passengers = []
-        self.passenger_processing_ratio = []
+        self.passenger_processing_delay = []
         self.passenger_waiting_time = []
         self.passenger_promise_deficit = []
         # MISC
@@ -92,13 +92,15 @@ class Stats:
         for run in runs:
             plt.subplot(1,2,runs.index(run)+1)
             vals = []
-            plt.hist(run.passenger_processing_ratio)
-            plt.title("Passenger waiting ratio in %s" %(run.mode))
+            plt.hist(run.passenger_processing_delay)
+            plt.title("Passenger processing delay in %s" %(run.mode))
             plt.legend()
 
         # Demand Stations
         f3 = plt.figure(3)
-        colors = ["blue", "red", "green", "blue", "black"]
+        colors = ["blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black"]
+        plt.title('boat load over time with %i boats, IAT:%i, MAE:%i' % (
+            len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
         col = 0
         for run in runs:
             boats = list(run.boat_load_in_time.values())
@@ -109,8 +111,6 @@ class Stats:
                 line = "dotted"
 
             for boat in boats:
-                plt.title('boat load over time with %i boats, IAT:%i, MAE:%i' % (
-                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
                 plt.plot(boat.keys(), boat.values(), label=run.mode + ": B" + str(num), linestyle=line,
                          color=colors[num])
                 num += 1
@@ -118,15 +118,15 @@ class Stats:
         plt.legend()
 
         # Promised time difference
+        f4 = plt.figure(4)
         plt.title('Passenger information over time with %i boats, IAT:%i, MAE:%i' % (
             len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
-        f4 = plt.figure(4)
         w = np.linspace(0, len(runs[central].passenger_promise_deficit)-1, len(runs[central].passenger_promise_deficit))
-        x = np.linspace(0, len(runs[central].passenger_processing_ratio) - 1, len(runs[central].passenger_processing_ratio))
+        x = np.linspace(0, len(runs[central].passenger_processing_delay) - 1, len(runs[central].passenger_processing_delay))
         y = np.linspace(0, len(runs[central].passenger_waiting_time) - 1, len(runs[central].passenger_waiting_time))
         z = np.linspace(0, len(runs[central].waiting_demand) - 1, len(runs[central].waiting_demand))
         plt.plot(w, runs[central].passenger_promise_deficit, 'ro', label="Delta Passenger Promise Deficit", color=colors[1], alpha=0.5)
-        plt.plot(x, runs[central].passenger_processing_ratio, 'ro', label="Passenger Processing ratio", color=colors[2], alpha=0.5)
+        plt.plot(x, runs[central].passenger_processing_delay, 'ro', label="Passenger Processing delay", color=colors[2], alpha=0.5)
         plt.plot(y, runs[central].passenger_waiting_time, 'ro', label="Passenger Waiting Time", color=colors[3], alpha=0.5)
         plt.plot(z, runs[central].waiting_demand, 'ro', label="Accrued Demand at Stations", color=colors[4], alpha=0.5)
         plt.legend()
@@ -180,7 +180,7 @@ class Stats:
             means.update({"boatload_ratio": st.mean(run.boat_load_raw_ratio)})
             # Passenger
             means.update({"passenger_waiting_time": st.mean(run.passenger_waiting_time)})
-            means.update({"passenger_processing_ratio":st.mean(run.passenger_processing_ratio)})
+            means.update({"passenger_processing_delay":st.mean(run.passenger_processing_delay)})
             means.update({"waiting_demand_station": st.mean(run.waiting_demand)})
 
 
@@ -189,7 +189,7 @@ class Stats:
             medians.update({"boatload": st.median(run.boat_load_raw)})
             medians.update({"boatload_ratio": st.median(run.boat_load_raw_ratio)})
             medians.update({"passenger_waiting_time": st.median(run.passenger_waiting_time)})
-            medians.update({"passenger_processing_ratio": st.median(run.passenger_processing_ratio)})
+            medians.update({"passenger_processing_delay": st.median(run.passenger_processing_delay)})
             medians.update({"waiting_demand_station": st.median(run.waiting_demand)})
 
             # population variance
@@ -197,7 +197,7 @@ class Stats:
             pvariances.update({"boatload": st.pstdev(run.boat_load_raw)})
             pvariances.update({"boatload_ratio": st.pstdev(run.boat_load_raw_ratio)})
             pvariances.update({"passenger_waiting_time": st.pstdev(run.passenger_waiting_time)})
-            pvariances.update({"passenger_processing_ratio": st.pstdev(run.passenger_processing_ratio)})
+            pvariances.update({"passenger_processing_delay": st.pstdev(run.passenger_processing_delay)})
             pvariances.update({"waiting_demand_station": st.pstdev(run.waiting_demand)})
 
             tabs = []
@@ -213,25 +213,28 @@ class Stats:
 
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
             print("Accured demand summed: %i" %run.accured_demand)
-            if run.mode == "Central":
-                mean =  st.mean(run.passenger_promise_deficit)
-                median =st.median(run.passenger_promise_deficit)
-                pvar = st.pstdev(run.passenger_promise_deficit)
-                print("passenger promise failure mean, median, variance: ", mean, median, pvar)
 
-            print("Stations approached per boat in %")
-            for i in range(len(run.boat_at_station)):
-                sum = np.sum(run.boat_at_station[i][1:])
-                for j in range(1, len(run.boat_at_station[0])):
-                    run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
-            print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
 
-            # print("Quantities Boats going from to:")
-            # for i in range(G.NUM_BOATS):
-            #     print("Boat %s" %(i+1))
-            #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
-
-            print("\n\n")
+        # Todo Repair, put back in
+        #     if run.mode == "Central":
+        #         mean =  st.mean(run.passenger_promise_deficit)
+        #         median =st.median(run.passenger_promise_deficit)
+        #         pvar = st.pstdev(run.passenger_promise_deficit)
+        #         print("passenger promise failure mean, median, variance: ", mean, median, pvar)
+        #
+        #     print("Stations approached per boat in %")
+        #     for i in range(len(run.boat_at_station)):
+        #         sum = np.sum(run.boat_at_station[i][1:])
+        #         for j in range(1, len(run.boat_at_station[0])):
+        #             run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
+        #     print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+        #
+        #     # print("Quantities Boats going from to:")
+        #     # for i in range(G.NUM_BOATS):
+        #     #     print("Boat %s" %(i+1))
+        #     #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+        #
+        #     print("\n\n")
 
 
 

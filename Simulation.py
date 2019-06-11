@@ -3,6 +3,7 @@ import Controller as Controller
 import Network as Map
 import Stats
 import Global as G
+from Passengers import Passenger
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
 import random
@@ -61,6 +62,7 @@ class Simulation:
         for station in self.map.stations.values():
             demand_state.append(station.get_demand())
         self.stats.final_demand = demand_state
+        Passenger.count = 0
         return self.stats
 
 
