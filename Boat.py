@@ -1,8 +1,8 @@
 import Stats
 import Global as G
 import Algorithms.Strategies as Strat
-
 from colorama import Fore, Back, Style
+from numpy.random import choice
 import logging
 import random
 import time
@@ -62,6 +62,25 @@ class Boat:
             while stations[random_station] == self.route[-1]:
                 random_station = random.randint(0, len(stations) - 1)
             self.route.append(stations[random_station])
+        self.route.pop(0)
+
+    def fill_route_length_prio(self):
+        stations = list(self.sim.map.stations.values())
+        stations.remove(self.location)
+        weights = []
+        total = 0
+        for station in stations:
+            weights.append(station.passengers.arrival_expect)
+            total += station.passengers.arrival_expect
+        weights = [x / total for x in weights]
+        for i in range(G.ROUTE_LENGHT):
+            random_station = choice(stations, p=weights)
+            while random_station.id == self.route[-1]:
+                random_station = choice(stations, p=weights)
+            self.route.append(random_station.id)
+        l = []
+        for i in range(100):
+            l.append(choice(stations, p=weights))
         self.route.pop(0)
 
     def drive(self, stop):
@@ -186,7 +205,7 @@ class Boat:
         for passenger in list:
             if len(self.passengers) < self.capacity:
                 self.passengers.append(passenger)
-                passenger.promised_delay = passenger.score[self]
+                if passenger.score != {}: passenger.promised_delay = passenger.score[self]
                 self.location.passengers.passengers.remove(passenger)
                 self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.arrivaltime)
                 got +=1
@@ -335,6 +354,16 @@ class Boat:
             destinations.append([station.id, 0])
         for passenger in self.passengers:
             destinations[passenger.dest-1][1] += 1
+        return destinations
+
+    def boarded_destinations_light(self, without = []):
+        destinations = []
+        for passenger in self.passengers:
+            if passenger.dest in without:
+                pass
+            else:
+                if passenger.dest not in destinations:
+                    destinations.append(passenger.dest)
         return destinations
 
     def get_passenger_destinations(self):

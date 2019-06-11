@@ -25,12 +25,18 @@ class Boats:
         self.strategy = None
 
     def start_driving(self):
+        # if not self.mode:
+        #     for boat in self.boats.values():
+        #         # Anarchy
+        #         self.sim.env.process(boat.strat.take())
         if not self.mode:
-            for boat in self.boats.values():
-                # Anarchy
-                self.sim.env.process(boat.strat.take())
-        if self.mode:
             self.strategy = Strategies.Decision_Union(self.sim)
+            for boat in self.boats.values():
+                # Central
+                self.env.process(self.strategy.take(self.boats[boat.id]))
+
+        if self.mode:
+            self.strategy = Strategies.Decision_Union_New(self.sim)
             for boat in self.boats.values():
                 # Central
                 self.env.process(self.strategy.take(self.boats[boat.id]))

@@ -76,6 +76,17 @@ class Graph:
         for station in self.stations.values():
             pass
 
+    def demand_left(self, station = False):
+        if station is False:
+            for station in self.stations:
+                if len(station.passengers.passengers) > 1:
+                    return True
+            return False
+        else:
+            if len(station.passengers.passengers) > 1:
+                return True
+            return False
+
     def __iter__(self):
         return iter(self.stations.values())
 
@@ -85,6 +96,7 @@ class Graph:
         if to not in self.stations:
             self.add_station(to)
         self.stations[frm].add_neighbor(to, cost)
+        self.stations[to].add_neighbor(frm, cost)
 
     # Todo Maybe: move to Controller?
     def add_station(self, node):
@@ -365,7 +377,7 @@ class Charger(Station):
             self.occupiedBy = None
 
     def __repr__(self):
-        return "C%s:%i" % (str(self.id), self.get_demand())
+        return "C%s" % (str(self.id))
 
     def __str__(self):
         return "C%s:%i" % (str(self.id), self.get_demand())

@@ -66,6 +66,22 @@ class Passengers:
         for i in range (0, amount):
             self.new(arrivaltime=arrivaltime)
 
+    def get_to_dest(self, station):
+        station_id = station.id
+        list = []
+        for passenger in self.passengers:
+            if passenger.dest == station_id:
+                list.append(passenger)
+        return list
+
+    def passengers_boarded(self, to_be_deleted):
+        for passenger in to_be_deleted:
+            self.passengers.remove(passenger)
+
+    def passenger_boarded(self, to_be_deleted):
+        self.passengers.remove(to_be_deleted)
+
+
     def update_poisson(self):
         print("SUCCESS POISSON INIT STATION %i" %self.station)
         turn = 1
