@@ -9,7 +9,7 @@ log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
-NUM_BOATS = 2
+NUM_BOATS = 5
 locaction=-1
 BATTERY=100000
 chargingspeed=10
@@ -19,7 +19,7 @@ ROUTE_LENGHT = 10
 
 PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effect
 
-SIMTIME = 2000
+SIMTIME = 5000
 
 DOCK_TIMEOUT = 0
 PICK_UP_TIMEOUT = 0
@@ -45,11 +45,11 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-initial_demand = [450, 440, 420, 90, 110, 130, 150]
+#initial_demand = [450, 440, 420, 90, 110, 130, 150]
 initial_demand = [0,0,0,0,0,0,0]
 
 MAX_ARRIVAL_EXPECT = 7
-INTERARRIVALTIME = 10
+INTERARRIVALTIME = 2
 
 poisson_arrivals_expected = []
 for i in range(len(initial_demand)):
@@ -81,6 +81,10 @@ edgeList =     [[1, 2, 10, 1],
                 [4, 5, 80],
                 [5, 6, 50],
                 [6, 1, 60]]
+
+edgeList =     [[1, 2, 10, 1],
+                [2, 3, 20],
+                [3, 1, 60]]
 
 edgeList3 =     [[1, 2, 10, 1],
                  [3, 4, 30],

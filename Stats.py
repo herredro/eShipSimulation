@@ -213,25 +213,28 @@ class Stats:
 
             print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
             print("Accured demand summed: %i" %run.accured_demand)
-            if run.mode == "Central":
-                mean =  st.mean(run.passenger_promise_deficit)
-                median =st.median(run.passenger_promise_deficit)
-                pvar = st.pstdev(run.passenger_promise_deficit)
-                print("passenger promise failure mean, median, variance: ", mean, median, pvar)
 
-            print("Stations approached per boat in %")
-            for i in range(len(run.boat_at_station)):
-                sum = np.sum(run.boat_at_station[i][1:])
-                for j in range(1, len(run.boat_at_station[0])):
-                    run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
-            print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
 
-            # print("Quantities Boats going from to:")
-            # for i in range(G.NUM_BOATS):
-            #     print("Boat %s" %(i+1))
-            #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
-
-            print("\n\n")
+        # Todo Repair, put back in
+        #     if run.mode == "Central":
+        #         mean =  st.mean(run.passenger_promise_deficit)
+        #         median =st.median(run.passenger_promise_deficit)
+        #         pvar = st.pstdev(run.passenger_promise_deficit)
+        #         print("passenger promise failure mean, median, variance: ", mean, median, pvar)
+        #
+        #     print("Stations approached per boat in %")
+        #     for i in range(len(run.boat_at_station)):
+        #         sum = np.sum(run.boat_at_station[i][1:])
+        #         for j in range(1, len(run.boat_at_station[0])):
+        #             run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
+        #     print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+        #
+        #     # print("Quantities Boats going from to:")
+        #     # for i in range(G.NUM_BOATS):
+        #     #     print("Boat %s" %(i+1))
+        #     #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+        #
+        #     print("\n\n")
 
 
 
