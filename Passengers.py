@@ -11,7 +11,10 @@ class Passenger:
     def __init__(self, arrivaltime, dep, dest):
         Passenger.count +=1
         self.id = Passenger.count
-        self.arrivaltime = arrivaltime
+        self.time_arrival = arrivaltime
+        self.time_boarded = None
+        self.time_dispatched = None
+
         self.dep = dep
         self.dest = dest
         #Todo Simpy: Make passenger Resource
@@ -25,9 +28,10 @@ class Passenger:
     def set_score(self, boat, score):
         self.score[boat] = float(score)
 
-    def set_dropoff(self, time, ratio):
-        self.dropoff_time = time
-        self.dropoff_ratio= ratio
+    def finalize(self, distance):
+        self.stat_wts = self.time_boarded - self.time_arrival
+        self.stat_otb = self.time_dispatched - self.time_boarded - distance
+
 
     def get_best_matches(self):
         best_boats = []
@@ -89,6 +93,7 @@ class Passengers:
             timestamp = self.map.sim.env.now
             old = len(self.passengers)
             pois = G.poisson_arrivals[self.station-1][turn]
+            if self.map.sim.env.now > G.SIMTIME: pois = 0
             self.map.sim.stats.poisson_value_station[self.map.get_station(self.station)][self.map.env.now] = pois
             self.map.sim.stats.poisson_value[self.map.env.now] = pois
             for i in range(pois):
@@ -99,5 +104,15 @@ class Passengers:
             timepassed = self.map.sim.env.now - timestamp
             for i in range(timepassed):
                 self.map.sim.stats.waiting_demand.append(len(self.passengers))
+                self.map.sim.stats.waiting_demand_in_time[self.map.sim.env.now] = (len(self.passengers))
             # print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
             turn += 1
+            try:
+                self.map.sim.stats.total_demand_in_time[self.map.sim.env.now] += self.map.get_station(self.station).get_demand()
+
+            except KeyError:
+                self.map.sim.stats.total_demand_in_time[self.map.sim.env.now] = self.map.get_station(self.station).get_demand()
+            try:
+                self.map.sim.stats.demand_in_time[self.map.get_station(self.station)][self.map.sim.env.now] += self.map.get_station(self.station).get_demand()
+            except KeyError:
+                self.map.sim.stats.demand_in_time[self.map.get_station(self.station)][self.map.sim.env.now] = self.map.get_station(self.station).get_demand()

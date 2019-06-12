@@ -31,6 +31,14 @@ class Strategies:
                 yield next_stop
                 i += 1
 
+    def next_station_rev(self):
+        while True:
+            i = len(self.map.get_all_stations())
+            while i > 0:
+                next_stop = self.map.get_station(i)
+                yield next_stop
+                i -= 1
+
     #Todo if occ==cap && next station==curr_stat --> Move somewhere
     @staticmethod
     def highest_demand(map, boat):
@@ -46,11 +54,8 @@ class Decision_Union_New:
         self.map = sim.map
         self.boats = self.sim.cb.boats
         self.dijk = Algorithms.Dijkstra.Dijk(self.map)
-        self.stats = Stats.Stats_Boat(self.boats)
         # Stations
-        self.all_stations = []
-        for station in self.map.get_all_stations():
-            self.all_stations.append(station)
+        self.all_stations = self.map.get_all_stations()
 
         # Boat
         self.empty_route = [0,0]
@@ -74,6 +79,14 @@ class Decision_Union_New:
             yield self.sim.env.process(self.pickup(boat))
             #yield self.sim.env.process(self.charge(boat))
 
+    def score1(self, demand_pickable, expectation, distance):
+        score = (demand_pickable + ((expectation/G.INTERARRIVALTIME)*distance))/distance
+        return score
+
+    def score2(self, demand_pickable, expectation, distance):
+        score = (demand_pickable + ((expectation/G.INTERARRIVALTIME)*distance))/distance**1/(demand_pickable+1)
+        return score
+
     def drive(self, boat):
         # #ToDO Central: Calc these ratios for all boats, then compare
         next_station = None
@@ -88,7 +101,7 @@ class Decision_Union_New:
                 expectation = station.passengers.arrival_expect
                 distance = self.map.get_distance(boat.location, station)
                 distance = distance if distance > 0 else 1
-                score = (demand_pickable + ((expectation/G.INTERARRIVALTIME)*distance))/distance
+                score = self.score1(demand_pickable, expectation, distance)
                 self.boat_station_scores[boat][station] = score
             keys = list(self.boat_station_scores[boat].keys())
             values = list(self.boat_station_scores[boat].values())
@@ -286,7 +299,6 @@ class Decision_Union:
             self.route_about_to_get_extended[1] += 1
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
-        boat.stats.luggage[self.sim.env.now] = len(boat.passengers)
         #next_station = best_next
         if next_station == boat.location:
             print("NIET GOED: NEXT LOC IS BOAT.LOC")
@@ -547,44 +559,6 @@ class Decision_Union:
     def sortkey0(self, item):
         return item[0]
 
-    # def passenger_info_ratio(self, boat):
-    #     # update open passengers
-    #     self.passengers_open = []
-    #
-    #     for passenger in boat.location.passengers.passengers:
-    #         self.passengers_open.append(passenger)
-    #     # update boat-passenger scores
-    #     start = time.time()
-    #     calculated = 0
-    #     for passenger in self.passengers_open:
-    #         for some_boat in self.boats.values():
-    #             # Calculates pickup_time and drive_time
-    #             pick_up_time = some_boat.wait_time_insert(passenger.dep)
-    #             drive_time   = some_boat.drive_time_insert(passenger.dep, passenger.dest)
-    #             total_time   = pick_up_time[1] + drive_time[1]
-    #
-    #             actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][self.map.get_station(passenger.dest)]
-    #             pass_waiting_score = float(total_time / actual_distance)
-    #             cap_left = (some_boat.capacity - len(some_boat.passengers))
-    #             operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
-    #
-    #             # Giving penalties for altered routes. Boolean: "altered" in [0]
-    #             penalties = 0
-    #             if pick_up_time[0]:
-    #                 penalties += 1
-    #             if drive_time[0]:
-    #                 penalties += 1
-    #             penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
-    #
-    #             passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
-    #             calculated += 1
-    #             # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
-    #         #if boat is not passenger.get_best_matches(): print("present boat not best match")
-    #     # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-    #     took = (time.time() - start) * 1000
-    #     G.log_comptimes.error("passenger_scores:\t%i" % (took))
-
-
 class Decision_Anarchy:
     def __init__(self, sim, boat):
         self.sim = sim
@@ -597,6 +571,10 @@ class Decision_Anarchy:
         self.pass_dest_at_location = []
         self.pass_dest_boarded = []
         self.planned_route = []
+        if boat.id % 2 == 0:
+            self.strat = self.move_strategy.next_station()
+        else:
+            self.strat = self.move_strategy.next_station()
 
         for station in self.map.get_all_stations():
             self.all_stations.append(station)
@@ -607,7 +585,6 @@ class Decision_Anarchy:
             self.pass_dest_boarded[i].append(0)
 
     def take(self):
-        strat = self.move_strategy.next_station()
         start_restrictions = False
         passenger_restrictions = None
         planned_to_charge_at = None
@@ -660,11 +637,9 @@ class Decision_Anarchy:
                 pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
             else:
                 pickup = self.sim.env.process(self.boat.pickup())
-            self.boat.stats.luggage[self.sim.env.now] = len(self.boat.passengers)
             yield pickup
             # REGULAR DRIVE
-            self.boat.stats.luggage[self.sim.env.now] = len(self.boat.passengers)
-            next_station = next(strat)
+            next_station = next(self.strat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive
 
