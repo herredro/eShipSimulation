@@ -5,6 +5,7 @@ import Global as G
 import time
 import operator
 import random
+import numpy as np
 random.seed(G.randomseed)
 
 
@@ -153,7 +154,7 @@ class Decision_Union_New:
         final_picks = []
         # If boat empty: pick up homogeneous passengers
         # if len(boat.passengers) < 1:
-        if True:
+        if len(boat.passengers) < 1:
             request_destinations = {}
             for passenger in boat.location.passengers.passengers:
                 try:
@@ -174,20 +175,60 @@ class Decision_Union_New:
                     del(request_destinations[most_prominent_destination])
                 if len(boat.passengers) >= boat.capacity:
                     break
-        # Probably already implemented in pickup
-        # boat.location.passengers.passengers_boarded(final_picks)
+        elif len(boat.passengers) > 0:
+            request_destinations = {}
+            for passenger in boat.location.passengers.passengers:
+                try:
+                    request_destinations[self.map.get_station(passenger.dest)] += 1
+                except KeyError:
+                    request_destinations[self.map.get_station(passenger.dest)] = 1
+            # Todo This can be done with all boats and then decide
+            # while self.map.demand_left(station = boat.location):
+            while request_destinations != {}:
+                most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
+                pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
+                while len(pickable) > 0:
+                    final_picks.append(pickable.pop(0))
+                    request_destinations[most_prominent_destination] -= 1
+                    if len(boat.passengers) >= boat.capacity:
+                        break
+                if len(pickable) == 0:
+                    del (request_destinations[most_prominent_destination])
+                if len(boat.passengers) >= boat.capacity:
+                    break
         pickup = self.sim.env.process(boat.pickup_selection(final_picks))
-        print("Boat%i: %i" %(boat.id, len(final_picks)))
 
         yield pickup
 
+        # calc route
         if len(boat.passengers) > 0:
             boarded_dest = boat.boarded_destinations_light()
+            boarded_dest = [1,3,5]
             to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
-            route = self.calc_route(boat.location, to_route)
-            self.boat_routes[boat] = route[0][1][1:]
+            route = self.calc_route2(boat.location, to_route)
+            self.boat_routes[boat] = route[1]
+        else: self.boat_routes[boat] = []
 
-
+    def calc_route2(self, begin, to_route):
+        if len(to_route) == 1:
+            distance = self.map.get_distance(begin, to_route[0])
+            ret_val = [distance, [begin, to_route[0]]]
+            return ret_val
+        else:
+            sub1s = []
+            sub2s = []
+            for station in to_route:
+                sub1s.append(self.calc_route2(begin, [station]))
+                less = to_route.copy()
+                less.remove(station)
+                sub2s.append(self.calc_route2(station, less))
+            final_scores = [a[0] + b[0] for a, b in zip(sub1s, sub2s)]
+            ind = int(np.argmin(final_scores))
+            merged_score = sub1s[ind][0] + sub2s[ind][0]
+            merged_path = list(sub1s[ind][1])
+            merged_path.extend(sub2s[ind][1][1:])
+            ret_val = [merged_score, merged_path]
+            return ret_val
 
     def calc_route(self, begin, to_route):
         if len(to_route) == 1:

@@ -234,9 +234,9 @@ class Stats:
             medians.update({"boatload": st.median(run.boat_load_raw)})
             medians.update({"boatload_ratio": st.median(run.boat_load_raw_ratio)})
 
-            medians.update({"P_wts": st.mean(wts)})
-            medians.update({"P_otb": st.mean(otb)})
-            medians.update({"P_tot": st.mean(tot)})
+            medians.update({"P_wts": st.median(wts)})
+            medians.update({"P_otb": st.median(otb)})
+            medians.update({"P_tot": st.median(tot)})
             medians.update({"waiting_demand_station": st.median(run.waiting_demand)})
 
             # population variance
@@ -244,9 +244,9 @@ class Stats:
             pvariances.update({"boatload": st.pstdev(run.boat_load_raw)})
             pvariances.update({"boatload_ratio": st.pstdev(run.boat_load_raw_ratio)})
 
-            pvariances.update({"P_wts": st.mean(wts)})
-            pvariances.update({"P_otb": st.mean(otb)})
-            pvariances.update({"P_tot": st.mean(tot)})
+            pvariances.update({"P_wts": st.pstdev(wts)})
+            pvariances.update({"P_otb": st.pstdev(otb)})
+            pvariances.update({"P_tot": st.pstdev(tot)})
             pvariances.update({"waiting_demand_station": st.pstdev(run.waiting_demand)})
 
             tabs = []
