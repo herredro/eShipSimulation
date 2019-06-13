@@ -357,6 +357,18 @@ class Boat:
             destinations[passenger.dest-1][1] += 1
         return destinations
 
+    def boarded_destinations_dict(self, without = []):
+        destinations = {}
+        for passenger in self.passengers:
+            if passenger.dest in without:
+                pass
+            else:
+                try:
+                    destinations[self.sim.map.get_station(passenger.dest)] += 1
+                except KeyError:
+                    destinations[self.sim.map.get_station(passenger.dest)] = 1
+        return destinations
+
     def boarded_destinations_light(self, without = []):
         destinations = []
         for passenger in self.passengers:

@@ -9,7 +9,7 @@ log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
-NUM_BOATS = 10
+NUM_BOATS = 4
 locaction=-1
 BATTERY=100000
 chargingspeed=10
@@ -24,6 +24,10 @@ SIMTIME = 1000
 DOCK_TIMEOUT = 0
 PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
+
+# Algorithm constants
+ALPHA_DISCOUNT_RECURSION = 3 #best value after quick test
+BETA_DESTINATION_MIX = 6
 
 debug = 1
 simpy = 1

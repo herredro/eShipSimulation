@@ -100,7 +100,7 @@ class Stats:
 
         # Demand Stations
         f3 = plt.figure(3)
-        colors = ["blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black"]
+        colors = ["blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black"]
         plt.title('boat load over time with %i boats, IAT:%i, MAE:%i' % (
             len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
         col = 0
