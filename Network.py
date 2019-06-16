@@ -114,7 +114,7 @@ class Graph:
         return new_charger
 
     def get_all_stations(self):
-        return self.stations.values()
+        return list(self.stations.values())
 
     # Input: Integer Return: Object
     def get_station(self, n):
@@ -287,7 +287,6 @@ class Station:
     def add_visitor(self, boat):
         self.boats.append(boat)
         try:
-            self.sim.stats.demand_in_time[self][self.sim.env.now] = self.get_demand()
             self.sim.stats.visited_stations[boat][self] += 1
         except KeyError:
             print("CATCH")
@@ -295,10 +294,6 @@ class Station:
     # Method for station to know a boat has left
     def remove_visitor(self, boat):
         self.boats.remove(boat)
-        try:
-            self.sim.stats.demand_in_time[self][self.sim.env.now] = self.get_demand()
-        except KeyError:
-            print("CATCH")
 
     # Return: All boats at this station
     def get_visitors(self):
@@ -333,8 +328,8 @@ class Charger(Station):
             if G.d_charge:
                 print(Fore.BLACK + Back.LIGHTYELLOW_EX + "%s:\t%s   \tCHARGE START @%s" % (self.env.now, str(boat), str(self)), end='')
                 print(Style.RESET_ALL)
-            self.sim.stats.usage_in_time[self][self.env.now-1] = 0
-            self.sim.stats.usage_in_time[self][self.env.now] = 1
+            self.sim.stats.charger_usage_in_time[self][self.env.now-1] = 0
+            self.sim.stats.charger_usage_in_time[self][self.env.now] = 1
             self.dock(boat)
             oldbat = boat.get_battery()
             if (self.occupiedBy == None):
@@ -357,8 +352,8 @@ class Charger(Station):
                     print(Fore.BLACK + Back.YELLOW + "%s:\t%s   \tCHARGE STOP  @%s (%d%%-%d%%)" % (self.env.now, str(boat), str(self), current_bat, new_battery), end='')
                     print(Style.RESET_ALL)
                 self.undock()
-                self.sim.stats.usage_in_time[self][self.env.now - 1] = 1
-                self.sim.stats.usage_in_time[self][self.env.now] = 0
+                self.sim.stats.charger_usage_in_time[self][self.env.now - 1] = 1
+                self.sim.stats.charger_usage_in_time[self][self.env.now] = 0
             else:
                 print("ERROR CHARGER: Charger already occupied")
 

@@ -1,4 +1,3 @@
-import Stats
 import Global as G
 import Algorithms.Strategies as Strat
 from colorama import Fore, Back, Style
@@ -26,10 +25,8 @@ class Boat:
         self.battery= battery
         self.consumption = consumption
         self.idle = True
-        self.stats = Stats.Stats_Boat(self)
 
         self.strat = Strat.Decision_Anarchy(sim, self)
-        self.stats.droveto[0]=location.id
         #Todo Route: Decrease with drive
         self.route = [location.id]
         self.fill_route_length()
@@ -114,7 +111,6 @@ class Boat:
                 logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
                 print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
                 print(Style.RESET_ALL)
-                self.stats.droveto[self.sim.env.now] = self.new_loc.id
                 self.sim.stats.drovefromto[self.id-1][self.old_loc.id-1][self.new_loc.id] += 1
                 self.sim.stats.boat_at_station[self.id-1][self.new_loc.id] += 1
                 return distance
@@ -140,20 +136,19 @@ class Boat:
         dropped = len(tobedropped)
         for passenger in tobedropped:
             self.passengers.remove(passenger)
-            actual_delay = (self.sim.env.now - passenger.arrivaltime) - self.sim.map.get_distance_id(passenger.dep, passenger.dest)
-            actual_ratio = (self.sim.env.now - passenger.arrivaltime) / self.sim.map.get_distance_id(passenger.dep,
-                                                                                                     passenger.dest)
+            distance = self.sim.map.get_distance_id(passenger.dep, passenger.dest)
+            actual_delay = (self.sim.env.now - passenger.time_arrival) - distance
+            actual_ratio = (self.sim.env.now - passenger.time_arrival) / distance
             # promised waiting times for central control
             if len(passenger.get_best_matches()) > 0:
                 promised_ratio = passenger.score[passenger.get_best_matches()[0]]
-                self.sim.stats.passenger_promise_deficit.append(passenger.promised_delay - actual_delay)
                 passenger.set_dropoff(self.sim.env.now, promised_ratio - actual_ratio)
-            self.sim.stats.passenger_processing_delay.append(actual_delay)
+            #self.sim.stats.passenger_processing_delay.append(actual_delay)
+            #self.sim.stats.override_in_time[self.sim.env.now] = actual_delay
+            passenger.time_dispatched = self.sim.env.now
+            passenger.finalize(distance)
             self.sim.stats.dropped_passengers.append(passenger)
-            print("delay passenger%s: promised:%s occured:%s" %(str(passenger.id), passenger.promised_delay, actual_delay))
-
-        self.stats.droppedoff[self.sim.env.now] = dropped
-
+            #print("delay passenger%s: promised:%s occured:%s" %(str(passenger.id), passenger.promised_delay, actual_delay))
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DO:%s:\t%i" % (self.id, took))
         if dropped > 0:
@@ -181,15 +176,14 @@ class Boat:
                     break
             for passenger in new_pas:
                 self.passengers.append(passenger)
-                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.arrivaltime)
+                passenger.time_boarded = self.sim.env.now
+                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.time_arrival)
+                self.sim.stats.p_wait_till_pickup[self.sim.env.now] = self.sim.env.now - passenger.time_arrival
             after = len(self.passengers)
-            self.stats.pickedup[self.sim.env.now] = len(new_pas)
             if len(new_pas) > 0:
                 yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
             else:
                 yield self.sim.env.timeout(0)
-            # Todo Stats: update reward to Statss-Class
-            # Stats.boatreward[self]+=after
             if G.debug_passenger:
                 print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
                 print(Style.RESET_ALL)
@@ -205,9 +199,10 @@ class Boat:
         for passenger in list:
             if len(self.passengers) < self.capacity:
                 self.passengers.append(passenger)
+                passenger.time_boarded = self.sim.env.now
                 if passenger.score != {}: passenger.promised_delay = passenger.score[self]
                 self.location.passengers.passengers.remove(passenger)
-                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.arrivaltime)
+                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.time_arrival)
                 got +=1
         if got > 0:
             yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
@@ -282,6 +277,12 @@ class Boat:
         wait_time = self.time_for_route(route[:index+1])
         return result[0], wait_time
 
+    def has_pass_boarded(self, id):
+        for passenger in self.passengers:
+            if passenger.id == id:
+                return True
+        return False
+
     def drive_time_insert(self, frm, to):
         route = self.route.copy()
         route.insert(0, self.location.id)
@@ -354,6 +355,18 @@ class Boat:
             destinations.append([station.id, 0])
         for passenger in self.passengers:
             destinations[passenger.dest-1][1] += 1
+        return destinations
+
+    def boarded_destinations_dict(self, without = []):
+        destinations = {}
+        for passenger in self.passengers:
+            if passenger.dest in without:
+                pass
+            else:
+                try:
+                    destinations[self.sim.map.get_station(passenger.dest)] += 1
+                except KeyError:
+                    destinations[self.sim.map.get_station(passenger.dest)] = 1
         return destinations
 
     def boarded_destinations_light(self, without = []):

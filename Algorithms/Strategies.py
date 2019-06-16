@@ -5,6 +5,7 @@ import Global as G
 import time
 import operator
 import random
+import numpy as np
 random.seed(G.randomseed)
 
 
@@ -31,6 +32,14 @@ class Strategies:
                 yield next_stop
                 i += 1
 
+    def next_station_rev(self):
+        while True:
+            i = len(self.map.get_all_stations())
+            while i > 0:
+                next_stop = self.map.get_station(i)
+                yield next_stop
+                i -= 1
+
     #Todo if occ==cap && next station==curr_stat --> Move somewhere
     @staticmethod
     def highest_demand(map, boat):
@@ -46,11 +55,8 @@ class Decision_Union_New:
         self.map = sim.map
         self.boats = self.sim.cb.boats
         self.dijk = Algorithms.Dijkstra.Dijk(self.map)
-        self.stats = Stats.Stats_Boat(self.boats)
         # Stations
-        self.all_stations = []
-        for station in self.map.get_all_stations():
-            self.all_stations.append(station)
+        self.all_stations = self.map.get_all_stations()
 
         # Boat
         self.empty_route = [0,0]
@@ -74,6 +80,14 @@ class Decision_Union_New:
             yield self.sim.env.process(self.pickup(boat))
             #yield self.sim.env.process(self.charge(boat))
 
+    def score1(self, demand_pickable, expectation, distance):
+        score = (demand_pickable + ((expectation/G.INTERARRIVALTIME)*distance))/distance
+        return score
+
+    def score2(self, demand_pickable, expectation, distance):
+        score = (demand_pickable + ((expectation/G.INTERARRIVALTIME)*distance))/distance**1/(demand_pickable+1)
+        return score
+
     def drive(self, boat):
         # #ToDO Central: Calc these ratios for all boats, then compare
         next_station = None
@@ -88,7 +102,7 @@ class Decision_Union_New:
                 expectation = station.passengers.arrival_expect
                 distance = self.map.get_distance(boat.location, station)
                 distance = distance if distance > 0 else 1
-                score = (demand_pickable + ((expectation/G.INTERARRIVALTIME)*distance))/distance
+                score = self.score1(demand_pickable, expectation, distance)
                 self.boat_station_scores[boat][station] = score
             keys = list(self.boat_station_scores[boat].keys())
             values = list(self.boat_station_scores[boat].values())
@@ -110,7 +124,7 @@ class Decision_Union_New:
                     continue
                 if score_other[other_boat] > score_this/2:
                     other_option = True
-            if other_option:
+            if other_option and len(self.boat_routes[boat]) < 1:
                 keys.remove(next_station)
                 values.remove(score_this)
                 max_key = values.index(max(values))
@@ -136,20 +150,26 @@ class Decision_Union_New:
             scores[boat] = self.boat_station_scores[boat][station]
         return scores
 
+    def destination_mix(self, passenger_list):
+        mix = []
+        for passenger in passenger_list:
+            if passenger.dest not in mix:
+                mix.append(passenger.dest)
+        return len(mix)
+
     def pickup(self, boat):
         final_picks = []
-        # If boat empty: pick up homogeneous passengers
-        # if len(boat.passengers) < 1:
-        if True:
+        if len(boat.passengers) < 1:
+        # Boat empty -> PU most frequent destination --> recall pickup()
             request_destinations = {}
             for passenger in boat.location.passengers.passengers:
+            # Calculating destination frequencies of demand at boats current location
                 try:
                     request_destinations[self.map.get_station(passenger.dest)] += 1
                 except KeyError:
                     request_destinations[self.map.get_station(passenger.dest)] = 1
             # Todo This can be done with all boats and then decide
-            #while self.map.demand_left(station = boat.location):
-            while request_destinations != {}:
+            while request_destinations != {} and self.destination_mix(final_picks) < G.ALPHA_DESTINATION_MIX:
                 most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
                 pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
                 while len(pickable) > 0:
@@ -161,62 +181,133 @@ class Decision_Union_New:
                     del(request_destinations[most_prominent_destination])
                 if len(boat.passengers) >= boat.capacity:
                     break
-        # Probably already implemented in pickup
-        # boat.location.passengers.passengers_boarded(final_picks)
+        elif len(boat.passengers) > 0:
+        # Boat non-empty -> UPD-conform -> UPD-extension
+            cap_left = boat.capacity - len(boat.passengers)
+            request_destinations = {}
+            for passenger in boat.location.passengers.passengers:
+                try:
+                    request_destinations[self.map.get_station(passenger.dest)] += 1
+                except KeyError:
+                    request_destinations[self.map.get_station(passenger.dest)] = 1
+            # Todo This can be done with all boats and then decide
+            # while self.map.demand_left(station = boat.location):
+            while (request_destinations != {} and self.destination_mix(boat.passengers + final_picks) < G.ALPHA_DESTINATION_MIX) and cap_left > 0:
+                req_copy = request_destinations.copy()
+                most_prominent_destination = max(req_copy.items(), key=operator.itemgetter(1))[0]
+                while most_prominent_destination.id not in boat.boarded_destinations_light():
+                    del (req_copy[most_prominent_destination])
+                    try:
+                        most_prominent_destination = max(req_copy.items(), key=operator.itemgetter(1))[0]
+                    except ValueError:
+                        (request_destinations[most_prominent_destination])
+                        break
+                pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
+                while len(pickable) > 0 and cap_left > 0:
+                    final_picks.append(pickable.pop(0))
+                    cap_left -=1
+                    request_destinations[most_prominent_destination] -= 1
+                    if len(boat.passengers) >= boat.capacity:
+                        break
+                if len(pickable) == 0:
+                    del (request_destinations[most_prominent_destination])
+                if len(boat.passengers) >= boat.capacity:
+                    break
+
         pickup = self.sim.env.process(boat.pickup_selection(final_picks))
-        print("Boat%i: %i" %(boat.id, len(final_picks)))
 
         yield pickup
-
+        boat_mix = self.destination_mix(boat.passengers)
+        # calc route
         if len(boat.passengers) > 0:
             boarded_dest = boat.boarded_destinations_light()
             to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
-            route = self.calc_route(boat.location, to_route)
-            self.boat_routes[boat] = route[0][1][1:]
 
+            boarded_dest = boat.boarded_destinations_dict()
+            #route = self.calc_route_d2(boarded_dest, begin={boat.location: len(boat.passengers)})
+            route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)
+            self.boat_routes[boat] = route[1][1:]
 
+        else: self.boat_routes[boat] = []
+
+    def calc_route_d(self, ffs, to_route):
+        if len(to_route) == 1:
+            #new_ffs = (next(iter(ffs)), next(iter(ffs.values())))
+            new_ffs = list(ffs.items())[0]
+            to = list(to_route.items())[0]
+            distance = self.map.get_distance(new_ffs[0], to[0])
+            discount = 1 + G.BETA_DISCOUNT_RECURSION * new_ffs[1] / G.CAPACITY
+            discount = 1
+            ret_val = [distance * (discount), [new_ffs[0], to[0]]]
+            return ret_val
+        else:
+            ffs2first = []
+            subprblm = []
+            for station in to_route:
+                station_freq = to_route[station]
+                ffs2first.append(self.calc_route_d(ffs, {station:to_route[station]}))
+                less = to_route.copy()
+                del less[station]
+                subprblm.append(self.calc_route_d({station:station_freq}, less))
+            final_scores = [a[0] + b[0] for a, b in zip(ffs2first, subprblm)]
+            ind = int(np.argmin(final_scores))
+            merged_score = ffs2first[ind][0] + subprblm[ind][0]
+            merged_path = list(ffs2first[ind][1])
+            merged_path.extend(subprblm[ind][1][1:])
+            ret_val = [merged_score, merged_path]
+            return ret_val
+
+    def calc_route_d2(self, to_route, begin=None):
+        if len(to_route) == 2:
+            # calc best order between 2
+            to_element = list(to_route.items())[0]
+            distance = self.map.get_distance(begin, to_element[0])
+            discount = 1+G.BETA_DISCOUNT_RECURSION*to_element[1]/G.CAPACITY
+            ret_val = [distance*(discount), [begin, to_element[0]]]
+            return ret_val
+        else:
+
+            sub1s = []
+            sub2s = []
+            for station in to_route:
+
+                route = self.calc_route_d2({station:to_route[station]})
+                if begin != None:
+                    bg_element = list(begin.items())
+                    additional = self.calc_route_d2({station:to_route[station]})
+                less = to_route.copy()
+                del less[station]
+                sub2s.append(self.calc_route_d(station, less))
+            final_scores = [a[0] + b[0] for a, b in zip(sub1s, sub2s)]
+            ind = int(np.argmin(final_scores))
+            merged_score = sub1s[ind][0] + sub2s[ind][0]
+            merged_path = list(sub1s[ind][1])
+            merged_path.extend(sub2s[ind][1][1:])
+            ret_val = [merged_score, merged_path]
+            return ret_val
 
     def calc_route(self, begin, to_route):
         if len(to_route) == 1:
             distance = self.map.get_distance(begin, to_route[0])
-            return [[distance, [begin, to_route[0]]]]
-        if len(to_route) == 2:
-            distance0 = self.map.get_distance(begin, to_route[0])
-            distance1 = self.map.get_distance(begin, to_route[1])
-            distance2 = self.map.get_distance(to_route[0], to_route[1])
-            opt1 = (distance0+distance2, [begin, to_route[0], to_route[1]])
-            opt2 = (distance1+distance2, [begin, to_route[1], to_route[0]])
-            if (distance0 + distance2) < (distance1 + distance2):
-                return list([opt1])
-            elif (distance0 + distance2) > (distance1 + distance2):
-                return list([opt2])
-            else:
-                print("WARNING CALC_ROUTE: Multiple best combinations")
-                candidates = [opt1]
-                candidates.append(opt2)
-                return candidates
+            ret_val = [distance, [begin, to_route[0]]]
+            return ret_val
         else:
-            dist_station = {}
-            options = []
+            sub1s = []
+            sub2s = []
             for station in to_route:
+                sub1s.append(self.calc_route(begin, [station]))
                 less = to_route.copy()
                 less.remove(station)
-                new_options = self.calc_route(station, less)
-                for candidate in new_options:
-                    options.append(candidate)
-            options = sorted(options, key=self.sortkey0, reverse=False)
-            best_score = min(options, key=operator.itemgetter(0))[0]
-            options_best_score = [option for option in options if option[0] == best_score]
-            #new_cands = [option[1][0] for option in options_best_score]
-            if len(options_best_score) > 1:
-                best_opt = options_best_score[0]
-                best_dist = self.map.get_distance(begin, best_opt[1][0])
-                for opt in options_best_score:
-                    if self.map.get_distance(begin, opt[1][0]) < best_dist:
-                        best_opt = opt
-                new_dist = best_opt[0] + self.map.get_distance(begin, best_opt[1][0])
-                new_route = [begin] + best_opt[1]
-                return [[new_dist, new_route]]
+                sub2s.append(self.calc_route(station, less))
+            final_scores = [a[0] + b[0] for a, b in zip(sub1s, sub2s)]
+            ind = int(np.argmin(final_scores))
+            merged_score = sub1s[ind][0] + sub2s[ind][0]
+            merged_path = list(sub1s[ind][1])
+            merged_path.extend(sub2s[ind][1][1:])
+            ret_val = [merged_score, merged_path]
+            return ret_val
+
+
 
 
     def dropoff(self, boat):
@@ -286,7 +377,6 @@ class Decision_Union:
             self.route_about_to_get_extended[1] += 1
         took = (time.time() - start) * 1000
         G.log_comptimes.error("DR:%s:\t%i" % (boat.id, took))
-        boat.stats.luggage[self.sim.env.now] = len(boat.passengers)
         #next_station = best_next
         if next_station == boat.location:
             print("NIET GOED: NEXT LOC IS BOAT.LOC")
@@ -547,44 +637,6 @@ class Decision_Union:
     def sortkey0(self, item):
         return item[0]
 
-    # def passenger_info_ratio(self, boat):
-    #     # update open passengers
-    #     self.passengers_open = []
-    #
-    #     for passenger in boat.location.passengers.passengers:
-    #         self.passengers_open.append(passenger)
-    #     # update boat-passenger scores
-    #     start = time.time()
-    #     calculated = 0
-    #     for passenger in self.passengers_open:
-    #         for some_boat in self.boats.values():
-    #             # Calculates pickup_time and drive_time
-    #             pick_up_time = some_boat.wait_time_insert(passenger.dep)
-    #             drive_time   = some_boat.drive_time_insert(passenger.dep, passenger.dest)
-    #             total_time   = pick_up_time[1] + drive_time[1]
-    #
-    #             actual_distance = self.sim.map.distances[self.map.get_station(passenger.dep)][self.map.get_station(passenger.dest)]
-    #             pass_waiting_score = float(total_time / actual_distance)
-    #             cap_left = (some_boat.capacity - len(some_boat.passengers))
-    #             operating_grade_score = (1 / cap_left) if (cap_left > 0) else 99
-    #
-    #             # Giving penalties for altered routes. Boolean: "altered" in [0]
-    #             penalties = 0
-    #             if pick_up_time[0]:
-    #                 penalties += 1
-    #             if drive_time[0]:
-    #                 penalties += 1
-    #             penalty_discount = G.PENALTY_ROUTE_DIVERSION ** penalties
-    #
-    #             passenger.set_score(some_boat, pass_waiting_score * penalty_discount)
-    #             calculated += 1
-    #             # print("sc: %f, py: %f, sc*py: %f" %(pass_waiting_score, penalty_discount, pass_waiting_score*penalty_discount))
-    #         #if boat is not passenger.get_best_matches(): print("present boat not best match")
-    #     # print("calculated %i%%" %(calculated/(len(self.boats)*len(self.passengers_open))*100))
-    #     took = (time.time() - start) * 1000
-    #     G.log_comptimes.error("passenger_scores:\t%i" % (took))
-
-
 class Decision_Anarchy:
     def __init__(self, sim, boat):
         self.sim = sim
@@ -597,6 +649,10 @@ class Decision_Anarchy:
         self.pass_dest_at_location = []
         self.pass_dest_boarded = []
         self.planned_route = []
+        if boat.id % 2 == 0:
+            self.strat = self.move_strategy.next_station()
+        else:
+            self.strat = self.move_strategy.next_station()
 
         for station in self.map.get_all_stations():
             self.all_stations.append(station)
@@ -607,7 +663,6 @@ class Decision_Anarchy:
             self.pass_dest_boarded[i].append(0)
 
     def take(self):
-        strat = self.move_strategy.next_station()
         start_restrictions = False
         passenger_restrictions = None
         planned_to_charge_at = None
@@ -660,11 +715,9 @@ class Decision_Anarchy:
                 pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
             else:
                 pickup = self.sim.env.process(self.boat.pickup())
-            self.boat.stats.luggage[self.sim.env.now] = len(self.boat.passengers)
             yield pickup
             # REGULAR DRIVE
-            self.boat.stats.luggage[self.sim.env.now] = len(self.boat.passengers)
-            next_station = next(strat)
+            next_station = next(self.strat)
             drive = self.sim.env.process(self.boat.drive(next_station))
             yield drive
 

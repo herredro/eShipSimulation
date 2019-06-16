@@ -9,21 +9,25 @@ log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
-NUM_BOATS = 5
+NUM_BOATS = 1
 locaction=-1
 BATTERY=100000
 chargingspeed=10
-CAPACITY = 50
+CAPACITY = 10
 consumption=1
 ROUTE_LENGHT = 10
 
 PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effect
 
-SIMTIME = 5000
+SIMTIME = 1000
 
 DOCK_TIMEOUT = 0
 PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
+
+# Algorithm constants
+BETA_DISCOUNT_RECURSION = 1 #best value after quick test
+ALPHA_DESTINATION_MIX = 6
 
 debug = 1
 simpy = 1
@@ -46,10 +50,10 @@ highestdemand = 1 #if not, closest neighbor
 
 
 #initial_demand = [450, 440, 420, 90, 110, 130, 150]
-initial_demand = [0,0,0,0,0,0,0]
+initial_demand = [0,0,0,0,0,0,0,0,0,0]
 
-MAX_ARRIVAL_EXPECT = 7
-INTERARRIVALTIME = 2
+MAX_ARRIVAL_EXPECT = 2
+INTERARRIVALTIME = 10
 
 poisson_arrivals_expected = []
 for i in range(len(initial_demand)):
@@ -61,6 +65,7 @@ for i in range(len(initial_demand)):
         for j in range(int(SIMTIME/10)):
             station.append(np.random.poisson(poisson_arrivals_expected[i]))
     poisson_arrivals.append(station)
+
 
 
 d_p_num = 534
@@ -75,14 +80,24 @@ edgeList2 = [[1, 2, 10, 1],
             [1, 9,  5],
             [9, 1,  5, 1]]
 
+edgeList9 =     [[1, 2, 10, 1],
+                [2, 3, 20],
+                [3, 4, 30],
+                [4, 5, 40],
+                [5, 6, 50],
+                [6, 7, 60],
+                [7, 8, 70],
+                [8, 9, 80],
+                [9, 1, 90]]
+
 edgeList =     [[1, 2, 10, 1],
                 [2, 3, 20],
                 [3, 4, 30],
-                [4, 5, 80],
-                [5, 6, 50],
-                [6, 1, 60]]
+                [4, 5, 40],
+                [5, 1, 50]]
 
-edgeList =     [[1, 2, 10, 1],
+
+edgeList2 =     [[1, 2, 10, 1],
                 [2, 3, 20],
                 [3, 1, 60]]
 
