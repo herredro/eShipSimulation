@@ -9,7 +9,7 @@ log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
 #BOAT DEFAULTS
-NUM_BOATS = 4
+NUM_BOATS = 1
 locaction=-1
 BATTERY=100000
 chargingspeed=10
@@ -26,8 +26,8 @@ PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
 
 # Algorithm constants
-ALPHA_DISCOUNT_RECURSION = 3 #best value after quick test
-BETA_DESTINATION_MIX = 6
+BETA_DISCOUNT_RECURSION = 1 #best value after quick test
+ALPHA_DESTINATION_MIX = 6
 
 debug = 1
 simpy = 1
@@ -52,7 +52,7 @@ highestdemand = 1 #if not, closest neighbor
 #initial_demand = [450, 440, 420, 90, 110, 130, 150]
 initial_demand = [0,0,0,0,0,0,0,0,0,0]
 
-MAX_ARRIVAL_EXPECT = 5
+MAX_ARRIVAL_EXPECT = 2
 INTERARRIVALTIME = 10
 
 poisson_arrivals_expected = []
@@ -65,6 +65,7 @@ for i in range(len(initial_demand)):
         for j in range(int(SIMTIME/10)):
             station.append(np.random.poisson(poisson_arrivals_expected[i]))
     poisson_arrivals.append(station)
+
 
 
 d_p_num = 534

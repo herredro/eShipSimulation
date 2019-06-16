@@ -160,15 +160,16 @@ class Decision_Union_New:
     def pickup(self, boat):
         final_picks = []
         if len(boat.passengers) < 1:
+        # Boat empty -> PU most frequent destination --> recall pickup()
             request_destinations = {}
             for passenger in boat.location.passengers.passengers:
+            # Calculating destination frequencies of demand at boats current location
                 try:
                     request_destinations[self.map.get_station(passenger.dest)] += 1
                 except KeyError:
                     request_destinations[self.map.get_station(passenger.dest)] = 1
             # Todo This can be done with all boats and then decide
-            #while self.map.demand_left(station = boat.location):
-            while request_destinations != {} and self.destination_mix(final_picks) < G.BETA_DESTINATION_MIX:
+            while request_destinations != {} and self.destination_mix(final_picks) < G.ALPHA_DESTINATION_MIX:
                 most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
                 pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
                 while len(pickable) > 0:
@@ -181,6 +182,7 @@ class Decision_Union_New:
                 if len(boat.passengers) >= boat.capacity:
                     break
         elif len(boat.passengers) > 0:
+        # Boat non-empty -> UPD-conform -> UPD-extension
             cap_left = boat.capacity - len(boat.passengers)
             request_destinations = {}
             for passenger in boat.location.passengers.passengers:
@@ -190,7 +192,7 @@ class Decision_Union_New:
                     request_destinations[self.map.get_station(passenger.dest)] = 1
             # Todo This can be done with all boats and then decide
             # while self.map.demand_left(station = boat.location):
-            while request_destinations != {} and self.destination_mix(boat.passengers + final_picks) < G.BETA_DESTINATION_MIX:
+            while (request_destinations != {} and self.destination_mix(boat.passengers + final_picks) < G.ALPHA_DESTINATION_MIX) and cap_left > 0:
                 req_copy = request_destinations.copy()
                 most_prominent_destination = max(req_copy.items(), key=operator.itemgetter(1))[0]
                 while most_prominent_destination.id not in boat.boarded_destinations_light():
@@ -218,27 +220,61 @@ class Decision_Union_New:
         boat_mix = self.destination_mix(boat.passengers)
         # calc route
         if len(boat.passengers) > 0:
-            # boarded_dest = boat.boarded_destinations_light()
-            # to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
+            boarded_dest = boat.boarded_destinations_light()
+            to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
 
             boarded_dest = boat.boarded_destinations_dict()
-            route = self.calc_route_d(boat.location, boarded_dest)
+            #route = self.calc_route_d2(boarded_dest, begin={boat.location: len(boat.passengers)})
+            route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)
             self.boat_routes[boat] = route[1][1:]
 
         else: self.boat_routes[boat] = []
 
-    def calc_route_d(self, begin, to_route):
+    def calc_route_d(self, ffs, to_route):
         if len(to_route) == 1:
+            #new_ffs = (next(iter(ffs)), next(iter(ffs.values())))
+            new_ffs = list(ffs.items())[0]
+            to = list(to_route.items())[0]
+            distance = self.map.get_distance(new_ffs[0], to[0])
+            discount = 1 + G.BETA_DISCOUNT_RECURSION * new_ffs[1] / G.CAPACITY
+            discount = 1
+            ret_val = [distance * (discount), [new_ffs[0], to[0]]]
+            return ret_val
+        else:
+            ffs2first = []
+            subprblm = []
+            for station in to_route:
+                station_freq = to_route[station]
+                ffs2first.append(self.calc_route_d(ffs, {station:to_route[station]}))
+                less = to_route.copy()
+                del less[station]
+                subprblm.append(self.calc_route_d({station:station_freq}, less))
+            final_scores = [a[0] + b[0] for a, b in zip(ffs2first, subprblm)]
+            ind = int(np.argmin(final_scores))
+            merged_score = ffs2first[ind][0] + subprblm[ind][0]
+            merged_path = list(ffs2first[ind][1])
+            merged_path.extend(subprblm[ind][1][1:])
+            ret_val = [merged_score, merged_path]
+            return ret_val
+
+    def calc_route_d2(self, to_route, begin=None):
+        if len(to_route) == 2:
+            # calc best order between 2
             to_element = list(to_route.items())[0]
             distance = self.map.get_distance(begin, to_element[0])
-            discount = 1+G.ALPHA_DISCOUNT_RECURSION*to_element[1]/G.CAPACITY
+            discount = 1+G.BETA_DISCOUNT_RECURSION*to_element[1]/G.CAPACITY
             ret_val = [distance*(discount), [begin, to_element[0]]]
             return ret_val
         else:
+
             sub1s = []
             sub2s = []
             for station in to_route:
-                sub1s.append(self.calc_route_d(begin, {station:to_route[station]}))
+
+                route = self.calc_route_d2({station:to_route[station]})
+                if begin != None:
+                    bg_element = list(begin.items())
+                    additional = self.calc_route_d2({station:to_route[station]})
                 less = to_route.copy()
                 del less[station]
                 sub2s.append(self.calc_route_d(station, less))
