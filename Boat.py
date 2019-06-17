@@ -127,8 +127,6 @@ class Boat:
         self.idle = 1
 
     def dropoff(self):
-        zim_time = self.sim.env.now
-        start = time.time()
         tobedropped = []
         for passenger in self.passengers:
             if passenger.dest == self.location.get_id():
@@ -143,14 +141,9 @@ class Boat:
             if len(passenger.get_best_matches()) > 0:
                 promised_ratio = passenger.score[passenger.get_best_matches()[0]]
                 passenger.set_dropoff(self.sim.env.now, promised_ratio - actual_ratio)
-            #self.sim.stats.passenger_processing_delay.append(actual_delay)
-            #self.sim.stats.override_in_time[self.sim.env.now] = actual_delay
             passenger.time_dispatched = self.sim.env.now
             passenger.finalize(distance)
             self.sim.stats.dropped_passengers.append(passenger)
-            #print("delay passenger%s: promised:%s occured:%s" %(str(passenger.id), passenger.promised_delay, actual_delay))
-        took = (time.time() - start) * 1000
-        G.log_comptimes.error("DO:%s:\t%i" % (self.id, took))
         if dropped > 0:
             yield self.sim.env.timeout(G.DROPOFF_TIMEOUT)
             if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (
@@ -158,39 +151,6 @@ class Boat:
             print(Style.RESET_ALL)
         else:
             yield self.sim.env.timeout(0)
-
-    def pickup(self, amount=None, restrictions=None):
-        if self.location.get_demand() > 0:
-            #Todo implement restrictions
-            before = len(self.passengers)
-            space_left = self.capacity - len(self.passengers)
-            to_be_pickedup = self.strat.pickup_priorities(restrictions)
-            # more, i, new_pas = True, 0, None
-            new_pas, i = [], 0
-            while len(new_pas) < space_left:
-                try:
-                    new_pas.extend(self.location.get_demand_to(to_be_pickedup[i][1], space_left-len(new_pas)))
-                    i+=1
-                except IndexError as e:
-                    print("WARNING PICKUP: %s picked up less than could: %s" %(self.id, e))
-                    break
-            for passenger in new_pas:
-                self.passengers.append(passenger)
-                passenger.time_boarded = self.sim.env.now
-                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.time_arrival)
-                self.sim.stats.p_wait_till_pickup[self.sim.env.now] = self.sim.env.now - passenger.time_arrival
-            after = len(self.passengers)
-            if len(new_pas) > 0:
-                yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
-            else:
-                yield self.sim.env.timeout(0)
-            if G.debug_passenger:
-                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
-                print(Style.RESET_ALL)
-        else:
-            if G.debug_passenger:
-                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
-                print(Style.RESET_ALL)
 
     def pickup_fifo(self, amount=None, restrictions=None):
         if self.location.get_demand() > 0:
@@ -359,21 +319,6 @@ class Boat:
             return self.route.index(passenger_loc)
         else:
             return 10*99
-
-    def pickup_any(self, amount):
-        if self.location.get_demand() > 0:
-            space_left = self.capacity - len(self.passengers)
-            for passenger in self.location.get_passengers(space_left):
-                self.passengers.append(passenger)
-            if amount > space_left:
-                if G.debug_passenger: print("%s:\t%s PICKED (only) %s at station %s" % (
-                self.sim.env.now, str(self), space_left, str(self.location)))
-            else:
-                if G.debug_passenger: print(
-                    "%s:\t%s PICKED %s at station %s" % (self.sim.env.now, str(self), space_left, str(self.location)))
-        else:
-            if G.debug_passenger: print(
-                "%s:\t%s NO PICKUP cause no demand at %s" % (self.sim.env.now, str(self), str(self.location)))
 
     def boarded_destinations(self):
         destinations = []

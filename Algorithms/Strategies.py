@@ -692,46 +692,9 @@ class Decision_Anarchy:
             # DROP OFF
             dropoff = self.sim.env.process(self.boat.dropoff())
             yield dropoff
-            # if self.boat.idle:
             self.update_dest_vals()
             if passenger_restrictions is not None:
                 passenger_restrictions = passenger_restrictions[1:]
-            #loop_size = self.dijk.run(self.boat.location.id, self.boat.location.id)[0][0]
-            # # POSSIBLE-CHARGERS-EVALUATION
-            # charger_infos = self.charger_infos()
-            # # BOOLEANS
-            # at_charger = type(self.boat.location) == Network.Charger
-            # bat_low = self.boat.battery < 30
-            # pass_dests = self.boat.get_passenger_destinations()
-            # # keep if reachable and can drop passengers on the way
-            # doable_distant_chargers = []
-            # for charger_info in charger_infos:
-            #     if self.boat.battery > charger_info[0][0]*self.boat.consumption:
-            #         if all(pas_des in charger_info[1:] for pas_des in pass_dests):
-            #             doable_distant_chargers.append(charger_info)
-            # cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) * self.boat.consumption
-            # if self.boat.location.id == planned_to_charge_at:
-            #     charge_now = True
-            # elif at_charger and len(doable_distant_chargers)==0:
-            #     charge_now = True
-            # elif (not at_charger) and cannot_loop:
-            #     start_restrictions = True
-            #     planned_to_charge_at = doable_distant_chargers[-1][-1]
-            #     passenger_restrictions = doable_distant_chargers[-1][2:]
-            # if charge_now:
-            #     #if start_restrictions:
-            #         if len(self.boat.passengers)>0:
-            #             print("PROBLEM CHARGE: charging with passengers")
-            #         charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
-            #         charge_now = False
-            #         planned_to_charge_at = None
-            #         start_restrictions = False
-            #         passenger_restrictions = None
-            #         #yield charged
-            # else:
-            #     if len(charger_infos) == 0:
-            #         print("ERROR PLANNING: Big Problem. Will sink.")
-
             # PU
             pickup = self.sim.env.process(self.boat.pickup_fifo())
             yield pickup
