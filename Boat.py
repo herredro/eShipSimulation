@@ -98,8 +98,8 @@ class Boat:
                 self.sim.stats.boat_load_raw.append(len(self.passengers))
                 self.sim.stats.boat_load_raw_ratio.append(len(self.passengers)/G.CAPACITY)
                 logging.info("SIMPY t=%s: %s started driving to %s" % (self.sim.env.now, str(self), str(stop)))
-                print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s   \tDRIVING⚡%i%% @%s" % (self.sim.env.now, str(self), self.battery, str(stop)), end='')
-                print(Style.RESET_ALL)
+                if G.live: print(Fore.BLACK + Back.LIGHTGREEN_EX + "%s:\t%s   \tDRIVING⚡%i%% @%s" % (self.sim.env.now, str(self), self.battery, str(stop)), end='')
+                if G.live: print(Style.RESET_ALL)
 
                 self.old_loc.remove_visitor(self)
                 self.set_location(self.new_loc)
@@ -109,8 +109,8 @@ class Boat:
                 self.idle = 1
 
                 logging.info("SIMPY t=%s: %s ARRIVED at %s" % (self.sim.env.now, str(self), str(stop)))
-                print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
-                print(Style.RESET_ALL)
+                if G.live: print(Fore.BLACK + Back.GREEN + "%s:\t%s   \tARRIVED\t\t @%s" % (self.sim.env.now, str(self), str(stop)), end='')
+                if G.live: print(Style.RESET_ALL)
                 self.sim.stats.drovefromto[self.id-1][self.old_loc.id-1][self.new_loc.id] += 1
                 self.sim.stats.boat_at_station[self.id-1][self.new_loc.id] += 1
                 return distance
@@ -146,9 +146,9 @@ class Boat:
             self.sim.stats.dropped_passengers.append(passenger)
         if dropped > 0:
             yield self.sim.env.timeout(G.DROPOFF_TIMEOUT)
-            if G.debug_passenger: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (
+            if G.live: print(Fore.BLACK + Back.CYAN + "%s:\t%s   \tDROPPED\t%i\t @%s" % (
                 self.sim.env.now, str(self), dropped, self.location), end='')
-            print(Style.RESET_ALL)
+            if G.live: print(Style.RESET_ALL)
         else:
             yield self.sim.env.timeout(0)
 
@@ -171,12 +171,12 @@ class Boat:
             else:
                 yield self.sim.env.timeout(0)
             if G.debug_passenger:
-                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
-                print(Style.RESET_ALL)
+                if G.live: print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
+                if G.live: print(Style.RESET_ALL)
         else:
             if G.debug_passenger:
-                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
-                print(Style.RESET_ALL)
+                if G.live: print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
+                if G.live: print(Style.RESET_ALL)
 
     def pickup_selection(self, list):
         zim_time = self.sim.env.now
@@ -193,9 +193,9 @@ class Boat:
         if got > 0:
             yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
             if G.debug_passenger:
-                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (had:%s, now:%s)" % (
+                if G.live: print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (had:%s, now:%s)" % (
                     self.sim.env.now, str(self), got, str(self.location), had, len(self.passengers)), end='')
-                print(Style.RESET_ALL)
+                if G.live: print(Style.RESET_ALL)
         else:
             yield self.sim.env.timeout(0)
 

@@ -3,6 +3,7 @@ import Controller as Controller
 import Network as Map
 import Stats
 import Global as G
+from Parameters import Parameters
 from Passengers import Passenger
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
@@ -14,29 +15,98 @@ import random
 
 class Simulation:
     def __init__(self):
-        #SimPy #Todo attach process?
+        hoho = []
+        central = []
+        num_boats = [1, 1, 1, 1, 1]
+        capacity = [10, 10, 10, 10, 10]
+        alpha = [i + 2 for i in range(6)] * 5
+        beta = [i + 1 for i in range(6)] * 5
+        max_arrival = []
+        for i in range(10):
+            #hoho.append(self.combined(False, alpha=alpha[i]))
+            central.append(self.combined(True, alpha=alpha[i], beta=beta[i]))
+            # same arising demand?
 
-        # if G.simpy:             self.simpy()
-        # elif G.ui_choice:       self.ui_choice()
-        # elif G.manual:          self.manual()
-        # else:                   self.strat_pick_drop()
 
-        # for i in range(100):
-        #     self.simpy(i)
-        data = []
+        # data.append(self.simpy(False))
         random.seed(G.randomseed)
-        data.append(self.simpy(False))
+        # data.append(self.simpy(True))
+
+        #self.stats.print_data(central)
+        if G.visuals: self.stats.macro__plot_data(central)
+
+    def combined(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, random_seed=G.randomseed):
+        self.central = central
+        G.randomseed = 1
         random.seed(G.randomseed)
-        data.append(self.simpy(True))
-
-        self.stats.analyze_data(data)
-        if G.visuals: self.stats.visualize_data(data)
-
-    def simpy(self, mode, num_boats = G.NUM_BOATS):
-        self.mode = mode
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, expected_arrivals, random_seed)
+        print("--CENTRAL--") if central else print("--HOHO--")
+        self.params.print()
         self.stats = Stats.Stats(self)
         self.env = simpy.Environment()
-        print(Style.RESET_ALL)
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        return self.stats
+
+    def hoho(self, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, init_demand=G.initial_demand):
+        self.central = False
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, init_demand)
+        print("--HOHO--")
+        self.params.print()
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        #print(Style.RESET_ALL)
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        return self.stats
+
+    def central(self, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, init_demand=G.initial_demand):
+        self.central = True
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, init_demand)
+        print("--CENTRAL--")
+        self.params.print()
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        #print(Style.RESET_ALL)
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        return self.stats
+
+    def simpy(self, mode, num_boats = G.NUM_BOATS):
+        self.central = mode
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        #print(Style.RESET_ALL)
         self.map = Map.Graph(self)
         self.strategy = Strategies.Strategies(self.map)
 
@@ -50,14 +120,13 @@ class Simulation:
             self.cb = Controller.Boats(self, mode, num_boats)
 
         self.stats.init()
-        self.cb.start_driving()
+        self.cb.start_now()
         demand_state = []
         for station in self.map.stations.values():
             demand_state.append(station.get_demand())
         self.stats.final_demand = demand_state
         Passenger.count = 0
         return self.stats
-
 
     def manual(self):
         self.cb.create_basic_boats(numBoats2create=G.numBoats)

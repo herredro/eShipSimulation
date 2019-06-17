@@ -9,6 +9,7 @@ import numpy as np
 class Stats:
     def __init__(self, sim):
         self.sim = sim
+        self.params = sim.params
         # STATIONS                      # #NETWORK#
         self.final_demand = 0
         self.demand_in_time = {}        # [station][time] = demand at station *Network*
@@ -33,7 +34,7 @@ class Stats:
         # MISC                                  # ##PASSENGERS##
         self.poisson_value_station = {}         # [station.id][time] = poisson_val
         self.poisson_value = {}                 # [time] = poisson_val
-        if sim.mode:
+        if sim.central:
             self.mode = "Central"
         else:
             self.mode = "HOHO"
@@ -45,13 +46,11 @@ class Stats:
             self.charger_usage_in_time[station] = {}
             self.charger_usage_in_time[station][0] = 0
             self.poisson_value_station[station] = {}
-
         # Boat
         for boat in self.sim.cb.boats.values():
             self.visited_stations[boat] = {}
             for station in self.sim.map.get_all_stations():
                 self.visited_stations[boat][station] = 0
-
         for i in range(1,G.NUM_BOATS+1):
             self.boat_load_in_time[i] = {}
         for i in range(0, G.CAPACITY+1):
@@ -64,13 +63,135 @@ class Stats:
                 self.drovefromto[i].append(["S%s"%str(j+1)])
                 for k in range(len(self.sim.map.get_all_stations())):
                     self.drovefromto[i][j].append(0)
-
         for station in self.sim.map.get_all_stations():
             self.charger_usage_in_time[station] = {}
             for boat in self.sim.cb.boats.values():
                 self.charger_usage_in_time[station][boat] = 0
 
-    def visualize_data(self, runs):
+    def micro__print_data_light(self):
+        # MEANS
+        a=1
+        for item in self.means.keys():
+            #print("%s: %s,\t"%(item, self.means[item]), end="")
+            print("%s%s: %s," % ("\t"*a, item, self.means[item]))
+            a+=1
+        # FINAL DEMAND
+        print("final demand: ", sum(self.final_demand))
+        print()
+
+    def micro__analyze_data(self):
+        #print(run.sim.params.to_string())
+        # Passenger Stats
+        wts, otb, tot = [], [], []
+        for passenger in self.dropped_passengers:
+            wts.append(passenger.stat_wts)
+            otb.append(passenger.stat_otb)
+            tot.append(passenger.stat_wts + passenger.stat_otb)
+
+        # MEANS
+        self.means = {
+            # BOATS
+            "boatload": round(st.mean(self.boat_load_raw), 2),
+            "boatload_ratio": round(st.mean(self.boat_load_raw_ratio), 2),
+            # PASSENGER
+            "P_wts": round(st.mean(wts), 2),
+            "P_otb": round(st.mean(otb), 2),
+            "P_tot": round(st.mean(tot), 2),
+            "waiting_demand_station": round(st.mean(self.waiting_demand), 2)}
+
+        self.medians = {
+            # BOATS
+            "boatload": st.median(self.boat_load_raw),
+            "boatload_ratio": st.median(self.boat_load_raw_ratio),
+            # PASSENGER
+            "P_wts": st.median(wts),
+            "P_otb": st.median(otb),
+            "P_tot": st.median(tot),
+            "waiting_demand_station": st.median(self.waiting_demand)}
+
+        self.stdev = {
+            # BOATS
+            "boatload": st.stdev(self.boat_load_raw),
+            "boatload_ratio": st.stdev(self.boat_load_raw_ratio),
+            # PASSENGER
+            "P_wts": st.stdev(wts),
+            "P_otb": st.stdev(otb),
+            "P_tot": st.stdev(tot),
+            "waiting_demand_station": st.median(self.waiting_demand)}
+
+
+
+    def macro__print_data(self, runs):
+        for run in runs:
+            #print(run.sim.params.to_string())
+            # Passenger Stats
+            wts, otb, tot = [], [], []
+            for passenger in run.dropped_passengers:
+                wts.append(passenger.stat_wts)
+                otb.append(passenger.stat_otb)
+                tot.append(passenger.stat_wts + passenger.stat_otb)
+
+            # MEANS
+            means = {}
+            # Boat
+            means.update({"boatload":st.mean(run.boat_load_raw)})
+            means.update({"boatload_ratio": st.mean(run.boat_load_raw_ratio)})
+            # Passenger
+            means.update({"P_wts": st.mean(wts)})
+            means.update({"P_otb": st.mean(otb)})
+            means.update({"P_tot": st.mean(tot)})
+            means.update({"waiting_demand_station": st.mean(run.waiting_demand)})
+
+            # medians
+            medians = {}
+            medians.update({"boatload": st.median(run.boat_load_raw)})
+            medians.update({"boatload_ratio": st.median(run.boat_load_raw_ratio)})
+            medians.update({"P_wts": st.median(wts)})
+            medians.update({"P_otb": st.median(otb)})
+            medians.update({"P_tot": st.median(tot)})
+            medians.update({"waiting_demand_station": st.median(run.waiting_demand)})
+
+            # population variance
+            pvariances = {}
+            pvariances.update({"boatload": st.pstdev(run.boat_load_raw)})
+            pvariances.update({"boatload_ratio": st.pstdev(run.boat_load_raw_ratio)})
+            pvariances.update({"P_wts": st.pstdev(wts)})
+            pvariances.update({"P_otb": st.pstdev(otb)})
+            pvariances.update({"P_tot": st.pstdev(tot)})
+            pvariances.update({"waiting_demand_station": st.pstdev(run.waiting_demand)})
+
+            tabs = []
+            for name in means.keys():
+                tab = []
+                tab.append(str(name))
+                tab.append(medians[name])
+                tab.append(means[name])
+                tab.append(pvariances[name])
+                tabs.append(tab)
+
+            print(run.mode)
+            if G.means: print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
+            if G.accrued_demand: print("Accured demand summed: %i" %run.accured_demand)
+
+            # Stations approached per boat
+            for i in range(len(run.boat_at_station)):
+                sum = np.sum(run.boat_at_station[i][1:])
+                for j in range(1, len(run.boat_at_station[0])):
+                    run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
+            if G.approached_stations: print("Stations approached per boat in %\n" + tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+            #print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+
+            # print("Quantities Boats going from to:")
+            # for i in range(G.NUM_BOATS):
+            #     print("Boat %s" %(i+1))
+            #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+
+            print("\n\n")
+        for run in runs:
+            print("%s:%s \t--> %i"%(run.mode, run.final_demand, np.sum(run.final_demand)))
+
+
+    def macro__plot_data(self, runs):
         central = None
         for run in runs:
             if run.mode == "Central": central = runs.index(run)
@@ -203,78 +324,3 @@ class Stats:
         plt.show()
 
         # self.boat_at_station = []  # [boat.id][station.id] += 1
-
-    def analyze_data(self, runs):
-        for run in runs:
-            # Passenger Stats
-            wts, otb, tot = [], [], []
-            for passenger in run.dropped_passengers:
-                wts.append(passenger.stat_wts)
-                otb.append(passenger.stat_otb)
-                tot.append(passenger.stat_wts + passenger.stat_otb)
-
-
-
-            # MEANS
-            means = {}
-            # Boat
-            means.update({"boatload":st.mean(run.boat_load_raw)})
-            means.update({"boatload_ratio": st.mean(run.boat_load_raw_ratio)})
-            # Passenger
-            means.update({"P_wts": st.mean(wts)})
-            means.update({"P_otb": st.mean(otb)})
-            means.update({"P_tot": st.mean(tot)})
-            means.update({"waiting_demand_station": st.mean(run.waiting_demand)})
-
-
-            # medians
-            medians = {}
-            medians.update({"boatload": st.median(run.boat_load_raw)})
-            medians.update({"boatload_ratio": st.median(run.boat_load_raw_ratio)})
-
-            medians.update({"P_wts": st.median(wts)})
-            medians.update({"P_otb": st.median(otb)})
-            medians.update({"P_tot": st.median(tot)})
-            medians.update({"waiting_demand_station": st.median(run.waiting_demand)})
-
-            # population variance
-            pvariances = {}
-            pvariances.update({"boatload": st.pstdev(run.boat_load_raw)})
-            pvariances.update({"boatload_ratio": st.pstdev(run.boat_load_raw_ratio)})
-
-            pvariances.update({"P_wts": st.pstdev(wts)})
-            pvariances.update({"P_otb": st.pstdev(otb)})
-            pvariances.update({"P_tot": st.pstdev(tot)})
-            pvariances.update({"waiting_demand_station": st.pstdev(run.waiting_demand)})
-
-            tabs = []
-            for name in means.keys():
-                tab = []
-                tab.append(str(name))
-                tab.append(medians[name])
-                tab.append(means[name])
-                tab.append(pvariances[name])
-                tabs.append(tab)
-
-            print(run.mode)
-
-            if G.means: print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
-            if G.accrued_demand: print("Accured demand summed: %i" %run.accured_demand)
-
-
-        # Todo Repair, put back in
-            for i in range(len(run.boat_at_station)):
-                sum = np.sum(run.boat_at_station[i][1:])
-                for j in range(1, len(run.boat_at_station[0])):
-                    run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
-            if G.approached_stations: print("Stations approached per boat in %\n" + tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
-            #print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
-
-            # print("Quantities Boats going from to:")
-            # for i in range(G.NUM_BOATS):
-            #     print("Boat %s" %(i+1))
-            #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
-
-            print("\n\n")
-        for run in runs:
-            print("%s:%s \t--> %i"%(run.mode, run.final_demand, np.sum(run.final_demand)))

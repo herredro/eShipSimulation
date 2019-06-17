@@ -5,6 +5,10 @@ from colorama import Fore, Back, Style
 from tabulate import tabulate
 import logging
 import simpy
+import random
+from numpy import random as nprandom
+random.seed(G.randomseed)
+nprandom.seed(G.randomseed)
 # ToDo should everybody know MAP? i.e. should Station know map? Maybe better for Multi Agent Algorithm
 
 
@@ -13,6 +17,7 @@ class Graph:
     # Graph has list of stations (vertex pbject) and list of chargers (charger object)
     def __init__(self, sim = None):
         self.sim = sim
+        self.params = sim.params
         self.env = sim.env
         self.stations = {}
         self.distances = {}
@@ -24,7 +29,7 @@ class Graph:
 
         self.create_map()
         self.init_demand()
-        self.generate_initial_demands(G.initial_demand)
+        self.append_initial_demand(self.generate_initial_demand())
 
     def create_distance_matrix(self):
         for station in self.stations.values():
@@ -66,7 +71,37 @@ class Graph:
         for station in self.stations.values():
             station.init_demand(Passengers.Passengers(self, station, self.stationkeys))
 
-    def generate_initial_demands(self, num):
+    def generate_initial_demand_random(self):
+        nprandom.seed(G.randomseed)
+        random.seed(G.randomseed)
+        self.poisson_arrivals_expected = []
+        for i in range(len(self.params.initial_demand)):
+            self.poisson_arrivals_expected.append(random.randint(1, self.params.max_arrival))
+        self.poisson_arrivals = []
+        for i in range(len(self.params.initial_demand)):
+            station = []
+            for i in range(len(G.initial_demand)):
+                for j in range(int(G.SIMTIME / 10)):
+                    station.append(nprandom.poisson(self.poisson_arrivals_expected[i]))
+            self.poisson_arrivals.append(station)
+        return self.poisson_arrivals_expected
+
+    def generate_initial_demand(self):
+        nprandom.seed(G.randomseed)
+        random.seed(G.randomseed)
+        self.poisson_arrivals_expected = []
+        for i in range(len(self.params.expected_arrivals)):
+            self.poisson_arrivals_expected.append(self.params.expected_arrivals[i])
+        self.poisson_arrivals = []
+        for i in range(len(self.params.expected_arrivals)):
+            station = []
+            for i in range(len(G.initial_demand)):
+                for j in range(int(G.SIMTIME / 10)):
+                    station.append(nprandom.poisson(self.poisson_arrivals_expected[i]))
+            self.poisson_arrivals.append(station)
+        return self.poisson_arrivals_expected
+
+    def append_initial_demand(self, num):
         i = 0
         for station in self.stations.values():
             station.passengers.add_multiple_demand(num[i], arrivaltime=self.env.now)

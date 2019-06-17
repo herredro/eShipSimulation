@@ -137,7 +137,7 @@ class Decision_Union_New:
                 yield drive
             elif self.same_station[boat] < 1:
                 # Todo implement a wait function?
-                print("Boat %s decided to stay and wait" %str(boat.id))
+                if G.live: print("Boat %s decided to stay and wait" %str(boat.id))
                 self.same_station[boat] += 1
                 yield self.sim.env.timeout(10)
             else:

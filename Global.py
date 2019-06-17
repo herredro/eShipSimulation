@@ -12,7 +12,7 @@ log_comptimes = logging.getLogger("Computation_Times")
 PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effect
 
 #SIM PARAMS
-SIMTIME = 2000
+SIMTIME = 1000
 DOCK_TIMEOUT = 0
 PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
@@ -31,10 +31,12 @@ ALPHA_DESTINATION_MIX = 3
 MAX_ARRIVAL_EXPECT = 2
 INTERARRIVALTIME = 10
 #initial_demand = [450, 440, 420, 90, 110, 130, 150]
-initial_demand = [0,0,0,0,0,0,0,0,0,0]
+initial_demand   = [0,0,0,0,0,0,0,0,0,0]
+expected_arrivals= [4,3,3,5,2,3,3,5,2,1]
 
 # STATS PRINT
-visuals = True
+live = False
+visuals = False
 means = True
 accrued_demand = True
 approached_stations = True
@@ -57,7 +59,7 @@ ROUTE_LENGHT = 10
 
 
 numBoats = 2
-debug = 1
+debug = 0
 simpy = 1
 ui_choice = 1
 d_charge = 1
@@ -72,17 +74,17 @@ highestdemand = 1 #if not, closest neighbor
 
 
 
-
-poisson_arrivals_expected = []
-for i in range(len(initial_demand)):
-    poisson_arrivals_expected.append(random.randint(1, MAX_ARRIVAL_EXPECT))
-poisson_arrivals = []
-for i in range(len(initial_demand)):
-    station = []
-    for i in range(len(initial_demand)):
-        for j in range(int(SIMTIME/10)):
-            station.append(np.random.poisson(poisson_arrivals_expected[i]))
-    poisson_arrivals.append(station)
+#
+# poisson_arrivals_expected = []
+# for i in range(len(initial_demand)):
+#     poisson_arrivals_expected.append(random.randint(1, MAX_ARRIVAL_EXPECT))
+# poisson_arrivals = []
+# for i in range(len(initial_demand)):
+#     station = []
+#     for i in range(len(initial_demand)):
+#         for j in range(int(SIMTIME/10)):
+#             station.append(np.random.poisson(poisson_arrivals_expected[i]))
+#     poisson_arrivals.append(station)
 
 
 

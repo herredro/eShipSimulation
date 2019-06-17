@@ -12,8 +12,9 @@ from colorama import Fore, Back, Style
 
 class Boats:
     # Boat Controller has map, number of boats, boats themselves as dictionary
-    def __init__(self, sim, mode, num=G.NUM_BOATS):
+    def __init__(self, sim, mode):
         self.sim = sim
+        self.params = sim.params
         self.map = sim.map
         self.env = sim.env
         self.mode = mode
@@ -21,10 +22,10 @@ class Boats:
         self.boats = {}
         self.map_strategy = Strategies.Strategies(self.map)
         Boat.Boat.count = 0
-        self.create_basic_boats(num)
+        self.create_basic_boats(sim.params.num_boats)
         self.strategy = None
 
-    def start_driving(self):
+    def start_now(self):
         if not self.mode:
             for boat in self.boats.values():
                 # Anarchy
@@ -40,7 +41,10 @@ class Boats:
             for boat in self.boats.values():
                 # Central
                 self.env.process(self.strategy.take(self.boats[boat.id]))
-        self.env.run(until=G.SIMTIME)
+        self.env.run(until=self.params.SIMTIME)
+        print("ALPHA: ", G.ALPHA_DESTINATION_MIX)
+        print("BETA : ", G.BETA_DISCOUNT_RECURSION)
+
 
     # Creates a Boat and adds to boat dict.
     def new_boat(self, loc=G.locaction, bat=G.BATTERY, chsp=G.chargingspeed, cons=G.consumption):

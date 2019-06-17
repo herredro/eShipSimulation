@@ -101,7 +101,7 @@ class Passengers:
         while True:
             timestamp = self.map.sim.env.now
             old = len(self.passengers)
-            pois = G.poisson_arrivals[self.station-1][turn]
+            pois = self.map.poisson_arrivals[self.station-1][turn]
             if self.map.sim.env.now > G.SIMTIME: pois = 0
             self.map.sim.stats.poisson_value_station[self.map.get_station(self.station)][self.map.env.now] = pois
             self.map.sim.stats.poisson_value[self.map.env.now] = pois
