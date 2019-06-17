@@ -66,6 +66,16 @@ class Passengers:
         new_passenger = Passenger(arrivaltime, self.station, dest)
         self.passengers.append(new_passenger)
 
+    def get_FIFO(self, amount):
+        fifo = []
+        if len(self.passengers) < amount:
+            amount = len(self.passengers)
+        for i in range(amount):
+            fifo.append(self.passengers[0])
+            self.passengers.remove(self.passengers[0])
+        return fifo
+
+
     def add_multiple_demand(self, amount=1, arrivaltime=0):
         for i in range (0, amount):
             self.new(arrivaltime=arrivaltime)
@@ -87,7 +97,6 @@ class Passengers:
 
 
     def update_poisson(self):
-        print("SUCCESS POISSON INIT STATION %i" %self.station)
         turn = 1
         while True:
             timestamp = self.map.sim.env.now

@@ -56,7 +56,7 @@ class Graph:
             self.add_edge(i[0], i[1], i[2])
         # Todo Stations are sorted by edge-creation, not by actual station number
         self.create_distance_matrix()
-        self.printedges_tabulate()
+        if G.map: self.printedges_tabulate()
 
     def init_demand(self):
         self.stationkeys = []
@@ -221,7 +221,6 @@ class Station:
     # Method to add an adjacent station
     def add_neighbor(self, neighbor, weight=0):
         self.adjacent[neighbor] = weight
-        print(1)
 
     def init_demand(self, passengers_object):
         self.passengers = passengers_object
@@ -289,7 +288,7 @@ class Station:
         try:
             self.sim.stats.visited_stations[boat][self] += 1
         except KeyError:
-            print("CATCH")
+            pass
 
     # Method for station to know a boat has left
     def remove_visitor(self, boat):

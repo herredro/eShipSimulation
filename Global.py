@@ -8,52 +8,70 @@ logging.basicConfig(level=logging.ERROR, filemode="w", filename="zim.log", forma
 log_pickdrop = logging.getLogger("Pick/Drop")
 log_comptimes = logging.getLogger("Computation_Times")
 
-#BOAT DEFAULTS
-NUM_BOATS = 1
-locaction=-1
-BATTERY=100000
-chargingspeed=10
-CAPACITY = 10
-consumption=1
-ROUTE_LENGHT = 10
 
 PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effect
 
-SIMTIME = 1000
-
+#SIM PARAMS
+SIMTIME = 2000
 DOCK_TIMEOUT = 0
 PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
 
-# Algorithm constants
-BETA_DISCOUNT_RECURSION = 1 #best value after quick test
-ALPHA_DESTINATION_MIX = 6
+# RESOURCES
+NUM_BOATS = 1
+CAPACITY = 10
+locaction=-1
+startVertex = 1
 
+# PARAMETERS ALGOS
+BETA_DISCOUNT_RECURSION = 1 #best value after quick test
+ALPHA_DESTINATION_MIX = 3
+
+# DEMAND
+MAX_ARRIVAL_EXPECT = 2
+INTERARRIVALTIME = 10
+#initial_demand = [450, 440, 420, 90, 110, 130, 150]
+initial_demand = [0,0,0,0,0,0,0,0,0,0]
+
+# STATS PRINT
+visuals = True
+means = True
+accrued_demand = True
+approached_stations = True
+
+# SIM OUTPUT
+map = False
+boat_creation = False
+
+
+
+
+
+
+
+#BOAT DEFAULTS
+BATTERY=100000
+chargingspeed=10
+consumption=1
+ROUTE_LENGHT = 10
+
+
+numBoats = 2
 debug = 1
 simpy = 1
 ui_choice = 1
-
 d_charge = 1
 debug_passenger = 1
 d_route_change = 1
 
 #SIMULATION INIT VARIABLES
-startVertex = 1
-numBoats = 2
 rounds = 2
-
 manual = 1
 semiauto = 1
-
 highestdemand = 1 #if not, closest neighbor
 
 
 
-#initial_demand = [450, 440, 420, 90, 110, 130, 150]
-initial_demand = [0,0,0,0,0,0,0,0,0,0]
-
-MAX_ARRIVAL_EXPECT = 2
-INTERARRIVALTIME = 10
 
 poisson_arrivals_expected = []
 for i in range(len(initial_demand)):

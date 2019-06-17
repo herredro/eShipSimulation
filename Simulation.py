@@ -29,11 +29,8 @@ class Simulation:
         random.seed(G.randomseed)
         data.append(self.simpy(True))
 
-
-        #self.visualize_data(data)
-
         self.stats.analyze_data(data)
-        self.stats.visualize_data(data)
+        if G.visuals: self.stats.visualize_data(data)
 
     def simpy(self, mode, num_boats = G.NUM_BOATS):
         self.mode = mode
@@ -45,19 +42,15 @@ class Simulation:
 
         if not mode:
             # ANARCHY
-            print("BOAT SIMULATOR ANARCHY\nINITIAL SETTINGS:\n")
+            print("BOAT SIMULATOR ANARCHY\n")
             self.cb = Controller.Boats(self, mode, num_boats)
         if mode:
             # CENTRAL CONTROL
-            print("BOAT SIMULATOR CENTRAL\nINITIAL SETTINGS:\n")
+            print("BOAT SIMULATOR CENTRAL\n")
             self.cb = Controller.Boats(self, mode, num_boats)
 
         self.stats.init()
-        for boat in self.cb.boats.values():
-            print("B" + str(boat.id) + " Route: ", end="")
-            print(boat.route)
         self.cb.start_driving()
-        self.map.printmapstate()
         demand_state = []
         for station in self.map.stations.values():
             demand_state.append(station.get_demand())

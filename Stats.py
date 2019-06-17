@@ -49,7 +49,6 @@ class Stats:
         # Boat
         for boat in self.sim.cb.boats.values():
             self.visited_stations[boat] = {}
-
             for station in self.sim.map.get_all_stations():
                 self.visited_stations[boat][station] = 0
 
@@ -74,7 +73,6 @@ class Stats:
     def visualize_data(self, runs):
         central = None
         for run in runs:
-            print(run.final_demand)
             if run.mode == "Central": central = runs.index(run)
 
         # plt.subplots(1, G.NUM_BOATS)
@@ -260,17 +258,17 @@ class Stats:
 
             print(run.mode)
 
-            print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
-            print("Accured demand summed: %i" %run.accured_demand)
+            if G.means: print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
+            if G.accrued_demand: print("Accured demand summed: %i" %run.accured_demand)
 
 
         # Todo Repair, put back in
-            print("Stations approached per boat in %")
             for i in range(len(run.boat_at_station)):
                 sum = np.sum(run.boat_at_station[i][1:])
                 for j in range(1, len(run.boat_at_station[0])):
                     run.boat_at_station[i][j] = run.boat_at_station[i][j] / sum *100
-            print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+            if G.approached_stations: print("Stations approached per boat in %\n" + tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
+            #print(tabulate(run.boat_at_station, ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
 
             # print("Quantities Boats going from to:")
             # for i in range(G.NUM_BOATS):
@@ -278,3 +276,5 @@ class Stats:
             #     print(tabulate(run.drovefromto[i], ['S1', 'S2', 'S3'], tablefmt="fancy_grid"))
 
             print("\n\n")
+        for run in runs:
+            print("%s:%s \t--> %i"%(run.mode, run.final_demand, np.sum(run.final_demand)))

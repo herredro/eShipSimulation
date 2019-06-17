@@ -32,7 +32,7 @@ class Boat:
         self.fill_route_length()
         #self.sim.env.process(self.strat.take())
 
-        if G.debug: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
+        if G.boat_creation: print("\t...Boat %s created with \n\t\tbattery=%s, charging_speed=%s, consumption=%s" % (self.id, self.battery, self.charging_speed, self.consumption))
 
     # Todo route: Fill up when empty
     def fill_route_time(self, simtime=G.SIMTIME):
@@ -174,6 +174,32 @@ class Boat:
                 except IndexError as e:
                     print("WARNING PICKUP: %s picked up less than could: %s" %(self.id, e))
                     break
+            for passenger in new_pas:
+                self.passengers.append(passenger)
+                passenger.time_boarded = self.sim.env.now
+                self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.time_arrival)
+                self.sim.stats.p_wait_till_pickup[self.sim.env.now] = self.sim.env.now - passenger.time_arrival
+            after = len(self.passengers)
+            if len(new_pas) > 0:
+                yield self.sim.env.timeout(G.PICK_UP_TIMEOUT)
+            else:
+                yield self.sim.env.timeout(0)
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tPICKED\t%s\t @%s (before:%s)" % (self.sim.env.now, str(self), len(new_pas), str(self.location), before), end='')
+                print(Style.RESET_ALL)
+        else:
+            if G.debug_passenger:
+                print(Fore.BLACK + Back.LIGHTCYAN_EX + "%s:\t%s   \tNO DEMAND\t @%s" % (self.sim.env.now, str(self), str(self.location)), end='')
+                print(Style.RESET_ALL)
+
+    def pickup_fifo(self, amount=None, restrictions=None):
+        if self.location.get_demand() > 0:
+            before = len(self.passengers)
+            space_left = self.capacity - len(self.passengers)
+            to_be_pickedup = self.strat.pickup_priorities(restrictions)
+
+
+            new_pas = (self.location.passengers.get_FIFO(space_left))
             for passenger in new_pas:
                 self.passengers.append(passenger)
                 passenger.time_boarded = self.sim.env.now
