@@ -42,8 +42,6 @@ class Boats:
                 # Central
                 self.env.process(self.strategy.take(self.boats[boat.id]))
         self.env.run(until=self.params.SIMTIME)
-        print("ALPHA: ", G.ALPHA_DESTINATION_MIX)
-        print("BETA : ", G.BETA_DISCOUNT_RECURSION)
 
 
     # Creates a Boat and adds to boat dict.

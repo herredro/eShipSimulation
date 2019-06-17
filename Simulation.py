@@ -17,16 +17,28 @@ class Simulation:
     def __init__(self):
         hoho = []
         central = []
-        num_boats = [1, 1, 1, 1, 1]
-        capacity = [10, 10, 10, 10, 10]
+        RUNS = 10
+        num_boats100 = [i + 1 for i in range(10)] * 10
+        capacity100 = [(int(i/10)+1)*10 for i in range(0,100)]
+        num_boats = [i % 5+1  for i in range(25)]
+        num_boats = [i+1 for i in range(10)]*int(RUNS/10)
+        num_boats = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 ]
+        capacity =  [10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 30, 30, 30, 30, 30, 40, 40, 40, 40, 40, 50, 50, 50, 50, 50]
+        # num_boats = [2,2]
+        # capacity = [10,20]
         alpha = [i + 2 for i in range(6)] * 5
         beta = [i + 1 for i in range(6)] * 5
         max_arrival = []
-        for i in range(10):
-            #hoho.append(self.combined(False, alpha=alpha[i]))
-            central.append(self.combined(True, alpha=alpha[i], beta=beta[i]))
-            # same arising demand?
+        for i in range(100):
+            hoho.append(self.combined(True,
+                                         num_boats=num_boats100[i],
+                                         capacity=capacity100[i]))
+            # central.append(self.combined(True,
+            #                              num_boats=num_boats100[i],
+            #                              capacity=capacity100[i]))
+            # # same arising demand?
 
+        self.stats.macro__plot_num_cap(hoho)
 
         # data.append(self.simpy(False))
         random.seed(G.randomseed)

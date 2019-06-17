@@ -76,11 +76,14 @@ class Stats:
             print("%s%s: %s," % ("\t"*a, item, self.means[item]))
             a+=1
         # FINAL DEMAND
-        print("final demand: ", sum(self.final_demand))
+        print("occured_demand=%s \t demand_left=%s \t SATISFIED=%s%%" %(self.accured_demand, sum(self.final_demand), self.satisfied))
         print()
 
     def micro__analyze_data(self):
         #print(run.sim.params.to_string())
+
+        self.satisfied = 100 - round(sum(self.final_demand) / self.accured_demand * 100)
+
         # Passenger Stats
         wts, otb, tot = [], [], []
         for passenger in self.dropped_passengers:
@@ -120,6 +123,44 @@ class Stats:
             "waiting_demand_station": st.median(self.waiting_demand)}
 
 
+    def macro__plot_num_cap(self, stats):
+        num_boats = []
+        capacity = []
+        for stat in stats:
+            num_boats.append(stat.params.num_boats)
+            capacity.append(stat.params.capacity)
+        capacity = sorted(list(set(capacity)))
+        num_boats = sorted(list(set(num_boats)))
+
+        arr = [[0 for i in range(len(num_boats))] for j in range(len(capacity))]
+        for stat in stats:
+            arr[capacity.index(stat.params.capacity)][num_boats.index(stat.params.num_boats)] = stat.satisfied
+
+        a=1
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(arr)
+
+        # We want to show all ticks...
+        ax.set_xticks(np.arange(len(num_boats)))
+        ax.set_yticks(np.arange(len(capacity)))
+        # ... and label them with the respective list entries
+        ax.set_xticklabels(num_boats)
+        ax.set_yticklabels(capacity)
+
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                 rotation_mode="anchor")
+
+        # Loop over data dimensions and create text annotations.
+        for i in range(len(num_boats)):
+            for j in range(len(capacity)):
+                text = ax.text(i, j, arr[j][i], ha="center", va="center", color="w")
+                pass
+
+        ax.set_title("Parameters #boats & capacity")
+        fig.tight_layout()
+        plt.show()
 
     def macro__print_data(self, runs):
         for run in runs:

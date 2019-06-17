@@ -18,7 +18,7 @@ class Boat:
         self.sim = sim
         self.id = (Boat.count)
         self.location = location
-        self.capacity = capacity
+        self.capacity = self.sim.params.capacity
         self.passengers = []
         # ToDo put this in charger
         self.charging_speed = charging_speed
