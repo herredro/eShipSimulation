@@ -3,68 +3,174 @@ import Controller as Controller
 import Network as Map
 import Stats
 import Global as G
+from Parameters import Parameters
 from Passengers import Passenger
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
 import random
-
-
+import csv
 
 
 
 class Simulation:
     def __init__(self):
-        #SimPy #Todo attach process?
+        #ran = [random.randint(1,100) for i in range(RUNS)]
+        hoho, central = [], []
 
-        # if G.simpy:             self.simpy()
-        # elif G.ui_choice:       self.ui_choice()
-        # elif G.manual:          self.manual()
-        # else:                   self.strat_pick_drop()
+        RUNS = 100
+        self.num_boats, self.capacity = self.csv_in('csv/numb-cap.csv')
+        alpha, beta = self.csv_in("csv/in/ab.csv")
 
-        # for i in range(100):
-        #     self.simpy(i)
-        data = []
+
+
+
+
+
+        for i in range(len(alpha)):
+            hoho.append(self.combined(True,
+                                        #random_seed=ran[i],
+                                        # num_boats=self.num_boats[i],
+                                        # capacity=self.capacity[i],
+                                        alpha=alpha[i],
+                                        beta=beta[i]
+                                      ))
+            print(i/len(alpha))
+
+        #self.stats.macro__plot_num_cap(hoho)
+
+        # data.append(self.simpy(False))
         random.seed(G.randomseed)
-        data.append(self.simpy(False))
+        # data.append(self.simpy(True))
+
+        #self.stats.print_data(central)
+        if G.visuals: self.stats.macro__plot_data(central)
+
+    def csv_in(self, file):
+        first, second = [], []
+        with open(file) as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                first.append(int(eval(row['first'])))
+                second.append((eval(row['second'])))
+        return first, second
+
+    def csv_out(self, stats):
+
+        with open('csv/out/central_alpha_beta.csv', mode='a') as csv_file:
+            fieldnames = [
+            'simtime',
+            'num_stations',
+            'num_boats',
+            'capacity',
+            'alpha',
+            'beta',
+            'randomseed',
+            'mn_boatload_ratio',
+            'p_wts',
+            'p_otb',
+            'mn_waiting_demand',
+            'dem_occ',
+            'dem_left',
+            'satisfied']
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+            #writer.writeheader()
+
+            writer.writerow(stats)
+
+    def combined(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, random_seed=G.randomseed):
+        self.central = central
+        G.randomseed = 1
         random.seed(G.randomseed)
-        data.append(self.simpy(True))
-
-
-        #self.visualize_data(data)
-
-        self.stats.analyze_data(data)
-        self.stats.visualize_data(data)
-
-    def simpy(self, mode, num_boats = G.NUM_BOATS):
-        self.mode = mode
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, expected_arrivals, random_seed)
+        print("--CENTRAL--") if central else print("--HOHO--")
+        self.params.print()
         self.stats = Stats.Stats(self)
         self.env = simpy.Environment()
-        print(Style.RESET_ALL)
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        self.csv_out(self.stats.csv_output())
+        return self.stats
+
+    def hoho(self, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, init_demand=G.initial_demand):
+        self.central = False
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, init_demand)
+        print("--HOHO--")
+        self.params.print()
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        #print(Style.RESET_ALL)
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        return self.stats
+
+    def central(self, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, init_demand=G.initial_demand):
+        self.central = True
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, init_demand)
+        print("--CENTRAL--")
+        self.params.print()
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        #print(Style.RESET_ALL)
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        return self.stats
+
+    def simpy(self, mode, num_boats = G.NUM_BOATS):
+        self.central = mode
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        #print(Style.RESET_ALL)
         self.map = Map.Graph(self)
         self.strategy = Strategies.Strategies(self.map)
 
         if not mode:
             # ANARCHY
-            print("BOAT SIMULATOR ANARCHY\nINITIAL SETTINGS:\n")
+            print("BOAT SIMULATOR ANARCHY\n")
             self.cb = Controller.Boats(self, mode, num_boats)
         if mode:
             # CENTRAL CONTROL
-            print("BOAT SIMULATOR CENTRAL\nINITIAL SETTINGS:\n")
+            print("BOAT SIMULATOR CENTRAL\n")
             self.cb = Controller.Boats(self, mode, num_boats)
 
         self.stats.init()
-        for boat in self.cb.boats.values():
-            print("B" + str(boat.id) + " Route: ", end="")
-            print(boat.route)
-        self.cb.start_driving()
-        self.map.printmapstate()
+        self.cb.start_now()
         demand_state = []
         for station in self.map.stations.values():
             demand_state.append(station.get_demand())
         self.stats.final_demand = demand_state
         Passenger.count = 0
         return self.stats
-
 
     def manual(self):
         self.cb.create_basic_boats(numBoats2create=G.numBoats)

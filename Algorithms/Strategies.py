@@ -89,11 +89,15 @@ class Decision_Union_New:
         return score
 
     def drive(self, boat):
-        # #ToDO Central: Calc these ratios for all boats, then compare
-        next_station = None
-        start = time.time()
-        # No existing route --> drive to best station
-        if len(self.boat_routes[boat]) < 1:
+        # calc route
+        if len(boat.passengers) > 0:
+            self.empty_route[0] += 1
+            boarded_dest = boat.boarded_destinations_dict()
+            route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)
+            self.boat_routes[boat] = route[1][1:]
+            next_station = self.boat_routes[boat].pop(0)
+        else:
+            self.boat_routes[boat] = []
             self.empty_route[1] += 1
             for station in self.all_stations:
                 demand = len(station.passengers.passengers)
@@ -109,9 +113,8 @@ class Decision_Union_New:
             max_key = values.index(max(values))
             max_station = keys[max_key]
             next_station = max_station
-        else:
-            self.empty_route[0] += 1
-            next_station = self.boat_routes[boat].pop(0)
+        # #ToDO Central: Calc these ratios for all boats, then compare
+        # No existing route --> drive to best station
         if next_station == boat.location:
             score_this = self.boat_station_scores[boat][next_station]
             # If other boats score for this station is at least half of this one's:
@@ -134,7 +137,7 @@ class Decision_Union_New:
                 yield drive
             elif self.same_station[boat] < 1:
                 # Todo implement a wait function?
-                print("Boat %s waiting" %str(boat.id))
+                if G.live: print("Boat %s decided to stay and wait" %str(boat.id))
                 self.same_station[boat] += 1
                 yield self.sim.env.timeout(10)
             else:
@@ -150,85 +153,103 @@ class Decision_Union_New:
             scores[boat] = self.boat_station_scores[boat][station]
         return scores
 
-    def destination_mix(self, passenger_list):
+    def UPD_of_list(self, passenger_list):
         mix = []
         for passenger in passenger_list:
             if passenger.dest not in mix:
                 mix.append(passenger.dest)
-        return len(mix)
+        return mix
+
+
+    # Boat empty -> PU most frequent destination --> recall pickup()
+    def pickup_empty(self, boat, passengers):
+        picks = []
+        request_destinations = {}
+        for passenger in passengers:
+            # Calculating destination frequencies of demand at boats current location
+            try:
+                request_destinations[self.map.get_station(passenger.dest)] += 1
+            except KeyError:
+                request_destinations[self.map.get_station(passenger.dest)] = 1
+
+        # Todo This can be done with all boats and then decide
+        if request_destinations != {}:
+            most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
+            pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
+            while len(pickable) > 0:
+                picks.append(pickable.pop(0))
+                passengers.remove(picks[-1])
+                request_destinations[most_prominent_destination] -= 1
+                # TODO: WEAK
+                if len(boat.passengers) >= boat.capacity:
+                    break
+            if len(pickable) == 0:
+                del (request_destinations[most_prominent_destination])
+            if len(boat.passengers) >= boat.capacity:
+                pass
+        return passengers, picks
+
+    def pickup_non_empty(self, boat, passengers, picks):
+    # Boat non-empty -> UPD-conform -> UPD-extension
+        cap_left = boat.capacity - len(boat.passengers) - len(picks)
+        alpha_cap = False
+        if cap_left < 1 or (len(self.UPD_of_list(boat.passengers + picks)) >= G.ALPHA_DESTINATION_MIX):
+            alpha_cap = True
+        request_destinations = {}
+        for passenger in passengers:
+            try:
+                request_destinations[self.map.get_station(passenger.dest)] += 1
+            except KeyError:
+                request_destinations[self.map.get_station(passenger.dest)] = 1
+
+        # Only proceed if passengers left at station AND still alpha-conform and seats left
+        if len(request_destinations)>= 1:
+            upd_conform = []
+            upd = self.UPD_of_list(boat.passengers + picks)
+            #[upd_conform.append(station) if station in upd else None for station in request_destinations.keys()]
+            for station in request_destinations.keys():
+                if station.id in upd:
+                    upd_conform.append(station)
+            most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
+            while most_prominent_destination not in upd_conform:
+                try:
+                    del (request_destinations[most_prominent_destination])
+                    most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
+                except ValueError:
+                    if alpha_cap:
+                        return [], picks
+                    break
+            pickable = []
+            [pickable.append(pas) if pas.dest == most_prominent_destination.id else None for pas in passengers]
+            while len(pickable) > 0 and cap_left > 0:
+                picks.append(pickable.pop(0))
+                passengers.remove(picks[-1])
+                cap_left -= 1
+            return passengers, picks
 
     def pickup(self, boat):
-        final_picks = []
-        if len(boat.passengers) < 1:
-        # Boat empty -> PU most frequent destination --> recall pickup()
-            request_destinations = {}
-            for passenger in boat.location.passengers.passengers:
-            # Calculating destination frequencies of demand at boats current location
-                try:
-                    request_destinations[self.map.get_station(passenger.dest)] += 1
-                except KeyError:
-                    request_destinations[self.map.get_station(passenger.dest)] = 1
-            # Todo This can be done with all boats and then decide
-            while request_destinations != {} and self.destination_mix(final_picks) < G.ALPHA_DESTINATION_MIX:
-                most_prominent_destination = max(request_destinations.items(), key=operator.itemgetter(1))[0]
-                pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
-                while len(pickable) > 0:
-                    final_picks.append(pickable.pop(0))
-                    request_destinations[most_prominent_destination] -= 1
-                    if len(boat.passengers) >= boat.capacity:
-                        break
-                if len(pickable) == 0:
-                    del(request_destinations[most_prominent_destination])
-                if len(boat.passengers) >= boat.capacity:
-                    break
-        elif len(boat.passengers) > 0:
-        # Boat non-empty -> UPD-conform -> UPD-extension
-            cap_left = boat.capacity - len(boat.passengers)
-            request_destinations = {}
-            for passenger in boat.location.passengers.passengers:
-                try:
-                    request_destinations[self.map.get_station(passenger.dest)] += 1
-                except KeyError:
-                    request_destinations[self.map.get_station(passenger.dest)] = 1
-            # Todo This can be done with all boats and then decide
-            # while self.map.demand_left(station = boat.location):
-            while (request_destinations != {} and self.destination_mix(boat.passengers + final_picks) < G.ALPHA_DESTINATION_MIX) and cap_left > 0:
-                req_copy = request_destinations.copy()
-                most_prominent_destination = max(req_copy.items(), key=operator.itemgetter(1))[0]
-                while most_prominent_destination.id not in boat.boarded_destinations_light():
-                    del (req_copy[most_prominent_destination])
-                    try:
-                        most_prominent_destination = max(req_copy.items(), key=operator.itemgetter(1))[0]
-                    except ValueError:
-                        (request_destinations[most_prominent_destination])
-                        break
-                pickable = list(boat.location.passengers.get_to_dest(most_prominent_destination))
-                while len(pickable) > 0 and cap_left > 0:
-                    final_picks.append(pickable.pop(0))
-                    cap_left -=1
-                    request_destinations[most_prominent_destination] -= 1
-                    if len(boat.passengers) >= boat.capacity:
-                        break
-                if len(pickable) == 0:
-                    del (request_destinations[most_prominent_destination])
-                if len(boat.passengers) >= boat.capacity:
-                    break
-
-        pickup = self.sim.env.process(boat.pickup_selection(final_picks))
-
+        passengers = boat.location.passengers.passengers.copy()
+        cap_left = boat.capacity - len(boat.passengers)
+        picks = []
+        if len(boat.passengers) + len(picks) < 1:
+            # Scenario: Boat empty
+            passengers, picks = self.pickup_empty(boat, passengers)
+        while len(picks) < cap_left and len(passengers) > 0 and (len(self.UPD_of_list(boat.passengers + picks)) <= G.ALPHA_DESTINATION_MIX):
+            # Scenario: Boat non-empty (loop)
+            passengers, picks = self.pickup_non_empty(boat, passengers, picks)
+        pickup = self.sim.env.process(boat.pickup_selection(picks))
         yield pickup
-        boat_mix = self.destination_mix(boat.passengers)
+
         # calc route
         if len(boat.passengers) > 0:
-            boarded_dest = boat.boarded_destinations_light()
-            to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
-
+            # OLD route_calc with list:
+            # boarded_dest = boat.boarded_destinations_light()
+            # to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
             boarded_dest = boat.boarded_destinations_dict()
-            #route = self.calc_route_d2(boarded_dest, begin={boat.location: len(boat.passengers)})
             route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)
             self.boat_routes[boat] = route[1][1:]
-
-        else: self.boat_routes[boat] = []
+        else:
+            self.boat_routes[boat] = []
 
     def calc_route_d(self, ffs, to_route):
         if len(to_route) == 1:
@@ -650,7 +671,7 @@ class Decision_Anarchy:
         self.pass_dest_boarded = []
         self.planned_route = []
         if boat.id % 2 == 0:
-            self.strat = self.move_strategy.next_station()
+            self.strat = self.move_strategy.next_station_rev()
         else:
             self.strat = self.move_strategy.next_station()
 
@@ -671,50 +692,11 @@ class Decision_Anarchy:
             # DROP OFF
             dropoff = self.sim.env.process(self.boat.dropoff())
             yield dropoff
-            # if self.boat.idle:
             self.update_dest_vals()
             if passenger_restrictions is not None:
                 passenger_restrictions = passenger_restrictions[1:]
-            loop_size = self.dijk.run(self.boat.location.id, self.boat.location.id)[0][0]
-            # # POSSIBLE-CHARGERS-EVALUATION
-            # charger_infos = self.charger_infos()
-            # # BOOLEANS
-            # at_charger = type(self.boat.location) == Network.Charger
-            # bat_low = self.boat.battery < 30
-            # pass_dests = self.boat.get_passenger_destinations()
-            # # keep if reachable and can drop passengers on the way
-            # doable_distant_chargers = []
-            # for charger_info in charger_infos:
-            #     if self.boat.battery > charger_info[0][0]*self.boat.consumption:
-            #         if all(pas_des in charger_info[1:] for pas_des in pass_dests):
-            #             doable_distant_chargers.append(charger_info)
-            # cannot_loop = self.boat.battery < (charger_infos[0][0][0] + loop_size) * self.boat.consumption
-            # if self.boat.location.id == planned_to_charge_at:
-            #     charge_now = True
-            # elif at_charger and len(doable_distant_chargers)==0:
-            #     charge_now = True
-            # elif (not at_charger) and cannot_loop:
-            #     start_restrictions = True
-            #     planned_to_charge_at = doable_distant_chargers[-1][-1]
-            #     passenger_restrictions = doable_distant_chargers[-1][2:]
-            # if charge_now:
-            #     #if start_restrictions:
-            #         if len(self.boat.passengers)>0:
-            #             print("PROBLEM CHARGE: charging with passengers")
-            #         charged = self.sim.env.process(self.boat.get_location().serve(self.boat, 200))
-            #         charge_now = False
-            #         planned_to_charge_at = None
-            #         start_restrictions = False
-            #         passenger_restrictions = None
-            #         #yield charged
-            # else:
-            #     if len(charger_infos) == 0:
-            #         print("ERROR PLANNING: Big Problem. Will sink.")
             # PU
-            if start_restrictions:
-                pickup = self.sim.env.process(self.boat.pickup(restrictions=passenger_restrictions))
-            else:
-                pickup = self.sim.env.process(self.boat.pickup())
+            pickup = self.sim.env.process(self.boat.pickup_fifo())
             yield pickup
             # REGULAR DRIVE
             next_station = next(self.strat)
