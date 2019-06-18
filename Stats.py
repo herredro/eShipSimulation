@@ -124,8 +124,10 @@ class Stats:
             "P_tot": st.stdev(tot),
             "waiting_demand_station": st.median(self.waiting_demand)}
 
-    def macro__export(self, stats):
-        pass
+    @staticmethod
+    def macro__summary(stats):
+        for stat in stats:
+            part = stat.csv_output()
 
     def csv_output(self):
         out = {

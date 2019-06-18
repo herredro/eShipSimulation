@@ -9,3 +9,6 @@ pip3 install numpy
 pip3 install colorama
 pip3 install tabulate
 pip3 install matplotlib
+
+#DOWNLOAD:
+# eShipSimulation/csv/out/central_alpha_beta.csv

@@ -35,7 +35,7 @@ initial_demand   = [0,0,0,0,0,0,0,0,0,0]
 expected_arrivals= [4,3,3,5,2,3,3,5,2,1]
 
 # STATS PRINT
-live = False
+live = True
 visuals = False
 means = True
 accrued_demand = True
