@@ -34,12 +34,14 @@ class Stats:
         # MISC                                  # ##PASSENGERS##
         self.poisson_value_station = {}         # [station.id][time] = poisson_val
         self.poisson_value = {}                 # [time] = poisson_val
+
         if sim.central:
             self.mode = "Central"
         else:
             self.mode = "HOHO"
 
     def init(self):
+        self.num_stations = len(self.sim.map.get_all_stations())
         for station in self.sim.map.get_all_stations():
             self.demand_in_time[station] = {}
             self.demand_in_time[station][0] = 0
@@ -122,6 +124,27 @@ class Stats:
             "P_tot": st.stdev(tot),
             "waiting_demand_station": st.median(self.waiting_demand)}
 
+    def macro__export(self, stats):
+        pass
+
+    def csv_output(self):
+        out = {
+            'simtime':self.params.SIMTIME,
+            'num_stations': self.num_stations,
+            'num_boats':self.params.num_boats,
+            'capacity':self.params.capacity,
+            'alpha':self.params.alpha,
+            'beta':self.params.beta,
+            'randomseed':self.params.randomseed,
+            'mn_boatload_ratio':self.means["boatload_ratio"],
+            'p_wts':self.means["P_wts"],
+            'p_otb':self.means["P_otb"],
+            'mn_waiting_demand':self.means["waiting_demand_station"],
+            'dem_occ':self.accured_demand,
+            'dem_left':sum(self.final_demand),
+            'satisfied':self.satisfied
+        }
+        return out
 
     def macro__plot_num_cap(self, stats):
         num_boats = []

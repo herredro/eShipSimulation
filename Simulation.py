@@ -8,37 +8,35 @@ from Passengers import Passenger
 import Algorithms.Strategies as Strategies
 from colorama import Fore, Back, Style
 import random
-
-
+import csv
 
 
 
 class Simulation:
     def __init__(self):
-        hoho = []
-        central = []
-        RUNS = 10
-        num_boats100 = [i + 1 for i in range(10)] * 10
-        capacity100 = [(int(i/10)+1)*10 for i in range(0,100)]
-        num_boats = [i % 5+1  for i in range(25)]
-        num_boats = [i+1 for i in range(10)]*int(RUNS/10)
-        num_boats = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 ]
-        capacity =  [10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 30, 30, 30, 30, 30, 40, 40, 40, 40, 40, 50, 50, 50, 50, 50]
-        # num_boats = [2,2]
-        # capacity = [10,20]
-        alpha = [i + 2 for i in range(6)] * 5
-        beta = [i + 1 for i in range(6)] * 5
-        max_arrival = []
-        for i in range(100):
-            hoho.append(self.combined(True,
-                                         num_boats=num_boats100[i],
-                                         capacity=capacity100[i]))
-            # central.append(self.combined(True,
-            #                              num_boats=num_boats100[i],
-            #                              capacity=capacity100[i]))
-            # # same arising demand?
+        #ran = [random.randint(1,100) for i in range(RUNS)]
+        hoho, central = [], []
 
-        self.stats.macro__plot_num_cap(hoho)
+        RUNS = 100
+        self.num_boats, self.capacity = self.csv_in('csv/numb-cap.csv')
+        alpha, beta = self.csv_in("csv/in/ab.csv")
+
+
+
+
+
+
+        for i in range(len(alpha)):
+            hoho.append(self.combined(True,
+                                        #random_seed=ran[i],
+                                        # num_boats=self.num_boats[i],
+                                        # capacity=self.capacity[i],
+                                        alpha=alpha[i],
+                                        beta=beta[i]
+                                      ))
+            print(i/len(alpha))
+
+        #self.stats.macro__plot_num_cap(hoho)
 
         # data.append(self.simpy(False))
         random.seed(G.randomseed)
@@ -46,6 +44,39 @@ class Simulation:
 
         #self.stats.print_data(central)
         if G.visuals: self.stats.macro__plot_data(central)
+
+    def csv_in(self, file):
+        first, second = [], []
+        with open(file) as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                first.append(int(eval(row['first'])))
+                second.append((eval(row['second'])))
+        return first, second
+
+    def csv_out(self, stats):
+
+        with open('csv/out/central_alpha_beta.csv', mode='a') as csv_file:
+            fieldnames = [
+            'simtime',
+            'num_stations',
+            'num_boats',
+            'capacity',
+            'alpha',
+            'beta',
+            'randomseed',
+            'mn_boatload_ratio',
+            'p_wts',
+            'p_otb',
+            'mn_waiting_demand',
+            'dem_occ',
+            'dem_left',
+            'satisfied']
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+            #writer.writeheader()
+
+            writer.writerow(stats)
 
     def combined(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
                  to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
@@ -68,6 +99,7 @@ class Simulation:
         Passenger.count = 0
         self.stats.micro__analyze_data()
         self.stats.micro__print_data_light()
+        self.csv_out(self.stats.csv_output())
         return self.stats
 
     def hoho(self, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,

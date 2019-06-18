@@ -12,7 +12,7 @@ log_comptimes = logging.getLogger("Computation_Times")
 PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effect
 
 #SIM PARAMS
-SIMTIME = 1000
+SIMTIME = 500
 DOCK_TIMEOUT = 0
 PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
@@ -100,17 +100,17 @@ edgeList2 = [[1, 2, 10, 1],
             [1, 9,  5],
             [9, 1,  5, 1]]
 
-edgeList9 =     [[1, 2, 10, 1],
+edgeList =     [[1, 2, 10, 1],
                 [2, 3, 20],
                 [3, 4, 30],
-                [4, 5, 40],
+                [4, 5, 20],
                 [5, 6, 50],
-                [6, 7, 60],
-                [7, 8, 70],
-                [8, 9, 80],
-                [9, 1, 90]]
+                [6, 7, 30],
+                [7, 8, 40],
+                [8, 9, 20],
+                [9, 1, 40]]
 
-edgeList =     [[1, 2, 10, 1],
+edgeList5 =     [[1, 2, 10, 1],
                 [2, 3, 20],
                 [3, 4, 30],
                 [4, 5, 40],
