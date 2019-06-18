@@ -20,6 +20,7 @@ class Simulation:
         RUNS = 100
         self.num_boats, self.capacity = self.csv_in('csv/numb-cap.csv')
         alpha, beta = self.csv_in("csv/in/ab.csv")
+        self.csv_out_init()
 
 
 
@@ -29,8 +30,8 @@ class Simulation:
         for i in range(len(alpha)):
             hoho.append(self.combined(True,
                                         #random_seed=ran[i],
-                                        # num_boats=self.num_boats[i],
-                                        # capacity=self.capacity[i],
+                                        num_boats=40,
+                                        capacity=10,
                                         alpha=alpha[i],
                                         beta=beta[i]
                                       ))
@@ -53,6 +54,26 @@ class Simulation:
                 first.append(int(eval(row['first'])))
                 second.append((eval(row['second'])))
         return first, second
+
+    def csv_out_init(self):
+        with open('csv/out/central_alpha_beta.csv', mode='w') as csv_file:
+            fieldnames = [
+            'simtime',
+            'num_stations',
+            'num_boats',
+            'capacity',
+            'alpha',
+            'beta',
+            'randomseed',
+            'mn_boatload_ratio',
+            'p_wts',
+            'p_otb',
+            'mn_waiting_demand',
+            'dem_occ',
+            'dem_left',
+            'satisfied']
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer.writeheader()
 
     def csv_out(self, stats):
 
