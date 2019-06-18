@@ -132,6 +132,7 @@ class Stats:
     def csv_output(self):
         out = {
             'simtime':self.params.SIMTIME,
+            'method': self.mode,
             'num_stations': self.num_stations,
             'num_boats':self.params.num_boats,
             'capacity':self.params.capacity,

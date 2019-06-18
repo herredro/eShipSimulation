@@ -241,15 +241,15 @@ class Decision_Union_New:
         yield pickup
 
         # calc route
-        if len(boat.passengers) > 0:
-            # OLD route_calc with list:
-            # boarded_dest = boat.boarded_destinations_light()
-            # to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
-            boarded_dest = boat.boarded_destinations_dict()
-            route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)
-            self.boat_routes[boat] = route[1][1:]
-        else:
-            self.boat_routes[boat] = []
+        # if len(boat.passengers) > 0:
+        #     # OLD route_calc with list:
+        #     # boarded_dest = boat.boarded_destinations_light()
+        #     # to_route = [self.map.get_station(station_id) for station_id in boarded_dest]
+        #     boarded_dest = boat.boarded_destinations_dict()
+        #     route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)
+        #     self.boat_routes[boat] = route[1][1:]
+        # else:
+        #     self.boat_routes[boat] = []
 
     def calc_route_d(self, ffs, to_route):
         if len(to_route) == 1:

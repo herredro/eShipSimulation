@@ -14,102 +14,140 @@ import numpy as np
 
 class Simulation:
     def __init__(self):
-        capacity = 30
-        self.EXPERIMENT_NAME = "Centralcap30"
 
-        hoho, central = [], []
+        # self.exp_num_a()
+        # self.exp_a_b()
+        # self.combined(True, num_boats=50, capacity=10, alpha=4)
+        # self.exp_num_a()
+        # self.test2()
+        #self.one()
+        self.exp_cap10()
+        self.exp_cap30()
+        self.exp_cap100()
 
-        # num_boats, capacity = self.csv_in('csv/numb-cap.csv')
-        alpha, beta = self.csv_in("csv/in/ab.csv")
-        self.csv_out_init(self.EXPERIMENT_NAME)
-
-        num_boats = [i*5 for i in range(1,21)]
-        num_boats.insert(0,1)
-        #num_boats = np.linspace(1,150,50, dtype=int)
-
-
-
-        RUNS = len(num_boats)
-        #ran = [random.randint(1,100) for i in range(RUNS)]
-
-
-
-        for i in range(RUNS):
-
-            hoho.append(self.combined(True, num_boats=num_boats[i], capacity=capacity))
-
-
-
-
-
-            # hoho.append(self.combined(True,
-            #                             #random_seed=ran[i],
-            #                             num_boats=40,
-            #                             capacity=10,
-            #                             alpha=alpha[i],
-            #                             beta=beta[i]
-            #                           ))
-            print(i/RUNS)
-
-        self.stats.macro__summary(hoho)
-        #self.stats.macro__plot_num_cap(hoho)
-
-        # data.append(self.simpy(False))
-        random.seed(G.randomseed)
-        # data.append(self.simpy(True))
 
         #self.stats.print_data(central)
-        if G.visuals: self.stats.macro__plot_data(central)
+        #if G.visuals: self.stats.macro__plot_data(central)
 
-    def csv_in(self, file):
-        first, second = [], []
-        with open(file) as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                first.append(int(eval(row['first'])))
-                second.append(int(eval(row['second'])))
-        return first, second
 
-    def csv_out_init(self, name):
-        with open('csv/out/%s.csv'%name, mode='w') as csv_file:
-            fieldnames = [
-            'simtime',
-            'num_stations',
-            'num_boats',
-            'capacity',
-            'alpha',
-            'beta',
-            'randomseed',
-            'mn_boatload_ratio',
-            'p_wts',
-            'p_otb',
-            'mn_waiting_demand',
-            'dem_occ',
-            'dem_left',
-            'satisfied']
-            csv_file.write("sep=,\n")
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
+    def exp_a_b(self):
+        alpha, beta = self.csv_in("csv/in/ab.csv")
 
-    def csv_out(self, stats, name):
-        with open('csv/out/%s.csv'%self.EXPERIMENT_NAME, mode='a') as csv_file:
-            fieldnames = [
-            'simtime',
-            'num_stations',
-            'num_boats',
-            'capacity',
-            'alpha',
-            'beta',
-            'randomseed',
-            'mn_boatload_ratio',
-            'p_wts',
-            'p_otb',
-            'mn_waiting_demand',
-            'dem_occ',
-            'dem_left',
-            'satisfied']
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writerow(stats)
+    def exp_num_a(self):
+        self.EXPERIMENT_NAME = "Centralcap100"
+        self.csv_out_init(self.EXPERIMENT_NAME)
+        capacity = 100
+        num_boats, alpha = self.csv_in('csv/in/caln100.csv')
+        RUNS = len(alpha)
+        hoho, central = [], []
+        for i in range(RUNS):
+            hoho.append(self.combined(True, num_boats=num_boats[i], capacity=capacity, alpha=alpha[i]))
+            print(i / RUNS)
+
+        self.EXPERIMENT_NAME = "Centralcap30"
+        self.csv_out_init(self.EXPERIMENT_NAME)
+        capacity = 30
+        num_boats, alpha = self.csv_in('csv/in/caln30.csv')
+        RUNS = len(alpha)
+        hoho, central = [], []
+        for i in range(RUNS):
+            hoho.append(self.combined(True, num_boats=num_boats[i], capacity=capacity, alpha=alpha[i]))
+            print(i / RUNS)
+
+        self.EXPERIMENT_NAME = "Centralcap10"
+        self.csv_out_init(self.EXPERIMENT_NAME)
+        capacity = 10
+        num_boats, alpha = self.csv_in('csv/in/caln10.csv')
+        RUNS = len(alpha)
+        hoho, central = [], []
+        for i in range(RUNS):
+            hoho.append(self.combined(True, num_boats=num_boats[i], capacity=capacity, alpha=alpha[i]))
+            print(i / RUNS)
+
+    def one(self):
+        a = [self.combined(True, capacity=200, num_boats=1)]
+        self.stats.macro__plot_data(a)
+
+    def test2(self):
+        stats=[]
+        capacity = 10
+        nb       = 8
+        stats.append(self.combined(False, capacity=capacity, num_boats=nb))
+        stats.append(self.combined(True, capacity=capacity, num_boats=nb))
+
+        if G.visuals: self.stats.macro__plot_data(stats)
+
+
+    def test(self):
+        ## FINDINGS: the smaller capacity, the better central.
+
+        capacity=10
+        self.combined(False, capacity=capacity, num_boats=2)
+        self.combined(True, capacity= capacity, num_boats=2)
+        self.combined(False, capacity=capacity, num_boats=4)
+        self.combined(True, capacity= capacity, num_boats=4)
+        self.combined(False, capacity=capacity, num_boats=6)
+        self.combined(True, capacity= capacity, num_boats=6)
+        self.combined(False, capacity=capacity, num_boats=8)
+        self.combined(True, capacity= capacity, num_boats=8)
+        print("##################################################")
+        print("##################################################")
+        capacity = 30
+        self.combined(False, capacity=capacity, num_boats=2)
+        self.combined(True, capacity=capacity, num_boats=2)
+        self.combined(False, capacity=capacity, num_boats=4)
+        self.combined(True, capacity=capacity, num_boats=4)
+        self.combined(False, capacity=capacity, num_boats=6)
+        self.combined(True, capacity=capacity, num_boats=6)
+        self.combined(False, capacity=capacity, num_boats=8)
+        self.combined(True, capacity=capacity, num_boats=8)
+        print("##################################################")
+        print("##################################################")
+        capacity = 60
+        self.combined(False, capacity=capacity, num_boats=2)
+        self.combined(True, capacity=capacity, num_boats=2)
+        self.combined(False, capacity=capacity, num_boats=4)
+        self.combined(True, capacity=capacity, num_boats=4)
+        self.combined(False, capacity=capacity, num_boats=6)
+        self.combined(True, capacity=capacity, num_boats=6)
+        self.combined(False, capacity=capacity, num_boats=8)
+        self.combined(True, capacity=capacity, num_boats=8)
+
+    def exp_cap10(self):
+        self.EXPERIMENT_NAME = "cap10"
+        self.csv_out_init(self.EXPERIMENT_NAME)
+        capacity = 10
+        nb = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+        RUNS = len(nb)
+        hoho, central = [], []
+        for i in range(RUNS):
+            hoho.append(self.combined(False, num_boats=nb[i], capacity=capacity))
+            central.append(self.combined(True, num_boats=nb[i], capacity=capacity))
+            print(i / RUNS)
+
+    def exp_cap30(self):
+        self.EXPERIMENT_NAME = "cap30"
+        self.csv_out_init(self.EXPERIMENT_NAME)
+        capacity = 30
+        nb = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+        RUNS = len(nb)
+        hoho, central = [], []
+        for i in range(RUNS):
+            hoho.append(self.combined(False, num_boats=nb[i], capacity=capacity))
+            central.append(self.combined(True, num_boats=nb[i], capacity=capacity))
+            print(i / RUNS)
+
+    def exp_cap100(self):
+        self.EXPERIMENT_NAME = "cap100"
+        self.csv_out_init(self.EXPERIMENT_NAME)
+        capacity = 100
+        nb = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+        RUNS = len(nb)
+        hoho, central = [], []
+        for i in range(RUNS):
+            hoho.append(self.combined(False, num_boats=nb[i], capacity=capacity))
+            central.append(self.combined(True, num_boats=nb[i], capacity=capacity))
+            print(i / RUNS)
 
     def combined(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
                  to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
@@ -178,6 +216,58 @@ class Simulation:
         self.stats.micro__analyze_data()
         self.stats.micro__print_data_light()
         return self.stats
+
+    def csv_in(self, file):
+        first, second = [], []
+        with open(file) as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                first.append(int(eval(row['num'])))
+                second.append(int(eval(row['alpha'])))
+        return first, second
+
+    def csv_out_init(self, name):
+        with open('csv/out/%s.csv'%name, mode='w') as csv_file:
+            fieldnames = [
+            'simtime',
+            'method',
+            'num_stations',
+            'num_boats',
+            'capacity',
+            'alpha',
+            'beta',
+            'randomseed',
+            'mn_boatload_ratio',
+            'p_wts',
+            'p_otb',
+            'mn_waiting_demand',
+            'dem_occ',
+            'dem_left',
+            'satisfied']
+            csv_file.write("sep=,\n")
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer.writeheader()
+
+    def csv_out(self, stats, name):
+        with open('csv/out/%s.csv'%self.EXPERIMENT_NAME, mode='a') as csv_file:
+            fieldnames = [
+            'simtime',
+            'method',
+            'num_stations',
+            'num_boats',
+            'capacity',
+            'alpha',
+            'beta',
+            'randomseed',
+            'mn_boatload_ratio',
+            'p_wts',
+            'p_otb',
+            'mn_waiting_demand',
+            'dem_occ',
+            'dem_left',
+            'satisfied']
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer.writerow(stats)
 
     def simpy(self, mode, num_boats = G.NUM_BOATS):
         self.central = mode
