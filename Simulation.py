@@ -14,34 +14,154 @@ import numpy as np
 
 class Simulation:
     def __init__(self):
+        self.fieldnames = [
+            'simtime',
+            'rand',
+            'meth',
+            'alpha',
+            'beta',
+            'num_boats',
+            'capacity',
+            'mn_boatload_ratio',
+            'num_stations',
+            'avgdist',
+            'stddist',
+            'avgexpdem',
+            'stdexpdem',
+            'dispatched',
+            'dropped',
+            'waiting',
+            'dem_occ',
+            'dem_left',
+            'mn_waiting_demand',
+            'p_wts',
+            'p_otb',
+            'satisfied']
 
-        # self.exp_num_a()
-        # self.exp_a_b()
+        self.safe = "benchmarkALL"
+        self.benchmark()
         # self.combined(True, num_boats=50, capacity=10, alpha=4)
         # self.exp_num_a()
         # self.test2()
         #self.one()
-        self.exp_cap10()
-        self.exp_cap30()
-        self.exp_cap100()
-
+        # self.safe="alpha_on_cap10num50"
+        # if self.safe != 0: self.csv_out_init(self.safe)
+        # self.combined(True, num_boats=10, capacity=50, alpha=1)
+        # self.combined(True, num_boats=10, capacity=50, alpha=2)
+        # self.combined(True, num_boats=10, capacity=50, alpha=3)
+        # self.combined(True, num_boats=10, capacity=50, alpha=4)
+        # self.combined(True, num_boats=10, capacity=50, alpha=5)
+        # self.combined(True, num_boats=10, capacity=50, alpha=6)
+        # self.combined(True, num_boats=10, capacity=50, alpha=7)
+        # self.exp_cap100()
+        #self.exp_cap10()
+        #self.exp_cap30()
+        #self.old_school()
+        #self.freestyle()
 
         #self.stats.print_data(central)
         #if G.visuals: self.stats.macro__plot_data(central)
 
+    def freestyle(self):
+        stats = []
+        self.safe = "Freestyle"
 
-    def exp_a_b(self):
-        alpha, beta = self.csv_in("csv/in/ab.csv")
+        capacity = 10
+        nb = 10
+        stats.append(self.combined(False, capacity=capacity, num_boats=nb))
+        stats.append(self.combined(True, capacity=capacity, num_boats=nb))
+        stats.append(self.combined(False, capacity=capacity, num_boats=nb, edges=G.edgeList5))
+        stats.append(self.combined(True, capacity=capacity, num_boats=nb, edges=G.edgeList5))
+        stats.append(self.combined(False, capacity=capacity, num_boats=20, edges=G.edgeList5))
+        stats.append(self.combined(True, capacity=capacity, num_boats=20, edges=G.edgeList5))
 
-    def exp_num_a(self):
-        self.EXPERIMENT_NAME = "Centralcap100"
+        if G.visuals: self.stats.macro__plot_data(stats)
+
+    def combined(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, random_seed=G.randomseed, edges=G.edgeList):
+        self.central = central
+        G.randomseed = 1
+        random.seed(G.randomseed)
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, expected_arrivals, edges, random_seed)
+        print("--CENTRAL--") if central else print("--HOHO--")
+        self.params.print()
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        if self.safe != 0: self.csv_out(self.stats.csv_output(), self.safe)
+        return self.stats
+
+    def combined2(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
+                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
+                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
+                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, random_seed=G.randomseed, edges=G.edgeList):
+        self.central = central
+        G.randomseed = 1
+        random.seed(G.randomseed)
+        num_st = len(edges)
+        if expected_arrivals == 1:
+            expected_arrivals = [2,2,2,2,2,2,2,2]
+        elif expected_arrivals == 2:
+            expected_arrivals = [1,3,0,2,4,1,2,3]
+        elif expected_arrivals == 3:
+            expected_arrivals = [0, 0, 1, 2, 3, 4, 4, 2]
+        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, expected_arrivals, edges, random_seed)
+        print("--CENTRAL--") if central else print("--HOHO--")
+        self.params.print()
+        self.stats = Stats.Stats(self)
+        self.env = simpy.Environment()
+        self.map = Map.Graph(self)
+        self.strategy = Strategies.Strategies(self.map)
+        self.cb = Controller.Boats(self, self.central)
+        self.stats.init()
+        self.cb.start_now()
+        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
+        Passenger.count = 0
+        self.stats.micro__analyze_data()
+        self.stats.micro__print_data_light()
+        if self.safe != 0: self.csv_out(self.stats.csv_output(), self.safe)
+        return self.stats
+
+    def csv_out_init(self, name):
+        with open('csv/out/%s.csv'%name, mode='w') as csv_file:
+
+            csv_file.write("sep=,\n")
+            writer = csv.DictWriter(csv_file, fieldnames=self.fieldnames)
+            writer.writeheader()
+
+    def csv_out(self, stats, name):
+        with open('csv/out/%s.csv'%self.safe, mode='a') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=self.fieldnames)
+            writer.writerow(stats)
+
+    def old_school(self):
+        runs=[]
+
+        runs.append(self.combined(False))
+        runs.append(self.combined(True))
+        self.stats.macro__print_data(runs)
+        self.stats.macro__plot_num_cap(runs)
+        if G.visuals: self.stats.macro__plot_data(runs)
+
+    def benchmark(self):
+        self.EXPERIMENT_NAME = "BenchAll"
         self.csv_out_init(self.EXPERIMENT_NAME)
-        capacity = 100
-        num_boats, alpha = self.csv_in('csv/in/caln100.csv')
+        alpha, beta, cap, nb, dem = self.csv_in("csv/in/benchall.csv")
         RUNS = len(alpha)
         hoho, central = [], []
         for i in range(RUNS):
-            hoho.append(self.combined(True, num_boats=num_boats[i], capacity=capacity, alpha=alpha[i]))
+            hoho.append(self.combined2(False, alpha=alpha[i], beta=beta[i], capacity=cap[i], num_boats=nb[i], expected_arrivals=dem))
+            hoho.append(self.combined2(True, alpha=alpha[i], beta=beta[i], capacity=cap[i], num_boats=nb[i], expected_arrivals=dem))
             print(i / RUNS)
 
         self.EXPERIMENT_NAME = "Centralcap30"
@@ -68,14 +188,6 @@ class Simulation:
         a = [self.combined(True, capacity=200, num_boats=1)]
         self.stats.macro__plot_data(a)
 
-    def test2(self):
-        stats=[]
-        capacity = 10
-        nb       = 8
-        stats.append(self.combined(False, capacity=capacity, num_boats=nb))
-        stats.append(self.combined(True, capacity=capacity, num_boats=nb))
-
-        if G.visuals: self.stats.macro__plot_data(stats)
 
 
     def test(self):
@@ -117,7 +229,7 @@ class Simulation:
         self.EXPERIMENT_NAME = "cap10"
         self.csv_out_init(self.EXPERIMENT_NAME)
         capacity = 10
-        nb = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+        nb = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
         RUNS = len(nb)
         hoho, central = [], []
         for i in range(RUNS):
@@ -149,29 +261,7 @@ class Simulation:
             central.append(self.combined(True, num_boats=nb[i], capacity=capacity))
             print(i / RUNS)
 
-    def combined(self, central, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
-                 to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
-                 alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
-                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, random_seed=G.randomseed):
-        self.central = central
-        G.randomseed = 1
-        random.seed(G.randomseed)
-        self.params = Parameters(self.central, simtime, to_dock, to_pickup, to_dropoff, num_boats, capacity, alpha, beta, max_arrival, iat, expected_arrivals, random_seed)
-        print("--CENTRAL--") if central else print("--HOHO--")
-        self.params.print()
-        self.stats = Stats.Stats(self)
-        self.env = simpy.Environment()
-        self.map = Map.Graph(self)
-        self.strategy = Strategies.Strategies(self.map)
-        self.cb = Controller.Boats(self, self.central)
-        self.stats.init()
-        self.cb.start_now()
-        self.stats.final_demand = [station.get_demand() for station in self.map.stations.values()]
-        Passenger.count = 0
-        self.stats.micro__analyze_data()
-        self.stats.micro__print_data_light()
-        self.csv_out(self.stats.csv_output(), self.EXPERIMENT_NAME)
-        return self.stats
+
 
     def hoho(self, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
                  to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
@@ -219,55 +309,18 @@ class Simulation:
 
     def csv_in(self, file):
         first, second = [], []
+        a,b,c,d,e = [], [], [], [], []
         with open(file) as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                first.append(int(eval(row['num'])))
-                second.append(int(eval(row['alpha'])))
-        return first, second
+                a.append(int(eval(row['alpha'])))
+                b.append(int(eval(row['beta'])))
+                c.append(int(eval(row['cap'])))
+                d.append(int(eval(row['nb'])))
+                e.append(int(eval(row['dem'])))
+        return a, b, c, d, e
 
-    def csv_out_init(self, name):
-        with open('csv/out/%s.csv'%name, mode='w') as csv_file:
-            fieldnames = [
-            'simtime',
-            'method',
-            'num_stations',
-            'num_boats',
-            'capacity',
-            'alpha',
-            'beta',
-            'randomseed',
-            'mn_boatload_ratio',
-            'p_wts',
-            'p_otb',
-            'mn_waiting_demand',
-            'dem_occ',
-            'dem_left',
-            'satisfied']
-            csv_file.write("sep=,\n")
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
 
-    def csv_out(self, stats, name):
-        with open('csv/out/%s.csv'%self.EXPERIMENT_NAME, mode='a') as csv_file:
-            fieldnames = [
-            'simtime',
-            'method',
-            'num_stations',
-            'num_boats',
-            'capacity',
-            'alpha',
-            'beta',
-            'randomseed',
-            'mn_boatload_ratio',
-            'p_wts',
-            'p_otb',
-            'mn_waiting_demand',
-            'dem_occ',
-            'dem_left',
-            'satisfied']
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writerow(stats)
 
     def simpy(self, mode, num_boats = G.NUM_BOATS):
         self.central = mode

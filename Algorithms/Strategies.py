@@ -72,6 +72,7 @@ class Decision_Union_New:
             for station in self.map.get_all_stations():
                 self.boat_station_scores[boat][station] = 0
 
+
     def take(self, boat):
         while True:
             # Loop for boat actions

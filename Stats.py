@@ -28,6 +28,7 @@ class Stats:
         self.visited_stations = {}      # [boat][station] += 1 **Network**
         # PASSENGERS                            # ##BOAT##
         self.dropped_passengers = []            # list: all dispatched passengers
+        self.left_passengers = []               # list: all dispatched passengers
         self.override_in_time= {}               # list: drive_time - distance
         self.passenger_waiting_time = []        # list: time(pu) - time(pas.arrival)
         self.p_wait_till_pickup = {}            # dict: [time] -> P was picked, how long was the wait
@@ -132,19 +133,26 @@ class Stats:
     def csv_output(self):
         out = {
             'simtime':self.params.SIMTIME,
-            'method': self.mode,
-            'num_stations': self.num_stations,
-            'num_boats':self.params.num_boats,
-            'capacity':self.params.capacity,
+            'rand':self.params.randomseed,
+            'meth': self.mode,
             'alpha':self.params.alpha,
             'beta':self.params.beta,
-            'randomseed':self.params.randomseed,
+            'num_boats':self.params.num_boats,
+            'capacity':self.params.capacity,
             'mn_boatload_ratio':self.means["boatload_ratio"],
-            'p_wts':self.means["P_wts"],
-            'p_otb':self.means["P_otb"],
-            'mn_waiting_demand':self.means["waiting_demand_station"],
+            'num_stations': self.num_stations,
+            'avgdist': round(st.mean(self.params.dists), 2),
+            'stddist': round(st.stdev(self.params.dists), 2),
+            'avgexpdem': round(st.mean(G.expected_arrivals[0:self.num_stations]), 2),
+            'stdexpdem': round(st.stdev(G.expected_arrivals[0:self.num_stations]), 2),
+            'dispatched':len(self.dropped_passengers),
+            'dropped': len(self.left_passengers),
+            'waiting': sum(self.final_demand),
             'dem_occ':self.accured_demand,
             'dem_left':sum(self.final_demand),
+            'mn_waiting_demand':self.means["waiting_demand_station"],
+            'p_wts':self.means["P_wts"],
+            'p_otb':self.means["P_otb"],
             'satisfied':self.satisfied
         }
         return out
@@ -349,8 +357,7 @@ class Stats:
             for station in stations:
                 plt.title('Demand at stations over time with %i boats, IAT:%i, MAE:%i' % (
                     len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
-                plt.plot(station.keys(), station.values(), label=run.mode + ": S" + str(num), linestyle=line,
-                         color=colors[num])
+                plt.plot(station.keys(), station.values(), label=run.mode + ": S" + str(num), linestyle=line)
                 num += 1
             col += 1
         plt.legend()

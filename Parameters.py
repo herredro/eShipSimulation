@@ -5,7 +5,7 @@ class Parameters:
     def __init__(self, mode, simtime=G.SIMTIME, to_dock=G.DOCK_TIMEOUT, to_pickup=G.PICK_UP_TIMEOUT,
                  to_dropoff=G.DROPOFF_TIMEOUT, num_boats=G.NUM_BOATS, capacity = G.CAPACITY,
                  alpha=G.ALPHA_DESTINATION_MIX, beta=G.BETA_DISCOUNT_RECURSION, max_arrival=G.MAX_ARRIVAL_EXPECT,
-                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, randomseed=G.randomseed):
+                 iat=G.INTERARRIVALTIME, expected_arrivals=G.expected_arrivals, edges=G.edgeList, randomseed=G.randomseed):
 
         self.mode = "CENTRAL" if mode else "HOHO"
         self.SIMTIME = simtime
@@ -19,8 +19,11 @@ class Parameters:
         self.max_arrival = max_arrival
         self.iat = iat
         self.expected_arrivals = expected_arrivals
+        self.edges = edges
         self.randomseed = randomseed
+        self.dists = [edges[i][2] for i in range(len(edges))]
         self.setG()
+
 
     def setG(self):
         G.SIMTIME = self.SIMTIME
@@ -35,7 +38,15 @@ class Parameters:
         G.INTERARRIVALTIME = self.iat
         G.expected_arrivals = self.expected_arrivals
         G.randomseed = self.randomseed
+        G.edgeList = self.edges
 
+    def get_demand(self, type):
+        if type == 1:
+            demand = uniform
+        elif type == 2:
+            demand = random
+        else:
+            demand = skewed
 
     def to_string(self):
         stringer = "simtime=%s,\ttimeoutdock=%s,\ttimeoutpickup=%s,\ttimeoutdropoff=%s,\t" \

@@ -27,7 +27,7 @@ class Graph:
         self.num_chargers = 0
         self.dijk = Algorithms.Dijkstra.Dijk(self)
 
-        self.create_map()
+        self.create_map(self.sim.params.edges)
         self.init_demand()
         self.append_initial_demand(self.generate_initial_demand())
 

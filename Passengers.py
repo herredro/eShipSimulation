@@ -14,6 +14,7 @@ class Passenger:
         self.time_arrival = arrivaltime
         self.time_boarded = None
         self.time_dispatched = None
+        self.max_wait_time = 50
 
         self.dep = dep
         self.dest = dest
@@ -66,12 +67,22 @@ class Passengers:
         new_passenger = Passenger(arrivaltime, self.station, dest)
         self.passengers.append(new_passenger)
 
+    def get(self, passenger):
+        self.passengers.remove(passenger)
+        if self.map.sim.env.now - passenger.time_arrival < passenger.max_wait_time:
+            return passenger
+        else:
+            self.map.sim.stats.left_passengers.append(passenger)
+
     def get_FIFO(self, amount):
         fifo = []
         if len(self.passengers) < amount:
             amount = len(self.passengers)
-        for i in range(amount):
-            fifo.append(self.passengers[0])
+        while len(fifo) < amount and len(self.passengers)>0:
+            if self.map.sim.env.now - self.passengers[0].time_arrival < self.passengers[0].max_wait_time:
+                fifo.append(self.passengers[0])
+            else:
+                self.map.sim.stats.left_passengers.append(self.passengers[0])
             self.passengers.remove(self.passengers[0])
         return fifo
 
