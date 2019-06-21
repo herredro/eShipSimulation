@@ -34,7 +34,7 @@ ALPHA_DESTINATION_MIX = 4
 
 # DEMAND
 MAX_ARRIVAL_EXPECT = 2
-INTERARRIVALTIME = 10
+INTERARRIVALTIME = 40
 #initial_demand = [450, 440, 420, 90, 110, 130, 150]
 initial_demand   = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 # expected_arrivals= [1,3,4,3,2,3,1,1,2,3,1,1,2,1,1,2]

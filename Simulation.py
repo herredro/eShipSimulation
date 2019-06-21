@@ -145,7 +145,7 @@ class Simulation:
             more_needed = True
             nb = 1
         print(needed)
-        print("This was for, %sstations, vary=%s" % (self.run.params.num_stations, nohomo))
+        print("This was for, %sstations, central=%s, vary=%s" % (self.run.params.num_stations, central, nohomo))
         print()
 
     def until_wt(self, central, goal, nohomo):
@@ -184,7 +184,7 @@ class Simulation:
             more_needed = True
             nb = 1
         print(needed)
-        print("This was for, %sstations, vary=%s" % (self.run.params.num_stations, nohomo))
+        print("This was for, %sstations, central=%s, vary=%s" % (self.run.params.num_stations, central, nohomo))
         print()
 
     def until_satisfied(self, central, goal, nohomo):
@@ -226,7 +226,7 @@ class Simulation:
             more_needed = True
             nb = 1
         print(needed)
-        print("This was for, %sstations, vary=%s" % (self.run.params.num_stations, nohomo))
+        print("This was for, %sstations, central=%s, vary=%s" % (self.run.params.num_stations, central, nohomo))
         print()
         # print("%s, goal=%s, no-homo=%s, map=%s" % (central, goal, run.params.non_homo_dem, run.params.num_stations))
         # print("For capacities %s, needed %s" %(capacities, needed))
