@@ -118,10 +118,13 @@ class Simulation:
                     nb += 1
                     if goalw/achieved < 0.3:
                         nb=nb*2
+                        continue
                     elif goalw/achieved < 0.4:
                         nb = nb + int(nb / 3)
+                        continue
                     elif goalw / achieved < 0.5:
                         nb = nb + 2
+                        continue
 
                     if goals/run.satisfied > 3:
                         nb=nb*2
