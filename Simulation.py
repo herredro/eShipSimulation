@@ -138,6 +138,7 @@ class Simulation:
                 else:
                     more_needed = False
                     need = run.params.num_boats
+                    self.run = run
                     needed.append(need)
                     #print("FOUND SOLUTION. %s,  " % run.mode, need, " boats needed.")
                     break
