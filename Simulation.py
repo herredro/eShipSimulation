@@ -59,8 +59,8 @@ class Simulation:
 
 
 
-        # self.wt()
-        # self.sat()
+        self.wt()
+        self.sat()
         self.both()
 
 
