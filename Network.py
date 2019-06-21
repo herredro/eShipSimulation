@@ -6,6 +6,7 @@ from tabulate import tabulate
 import logging
 import simpy
 import random
+import math
 from numpy import random as nprandom
 random.seed(G.randomseed)
 nprandom.seed(G.randomseed)
@@ -15,7 +16,7 @@ nprandom.seed(G.randomseed)
 # Todo Comment
 class Graph:
     # Graph has list of stations (vertex pbject) and list of chargers (charger object)
-    def __init__(self, sim = None):
+    def __init__(self, sim = None, num_stations=G.num_stations, dist_mean=G.dist_mean, dist_std=G.dist_std):
         self.sim = sim
         self.params = sim.params
         self.env = sim.env
@@ -27,9 +28,12 @@ class Graph:
         self.num_chargers = 0
         self.dijk = Algorithms.Dijkstra.Dijk(self)
 
-        self.create_map(self.sim.params.edges)
+        if num_stations == 0:
+            self.create_map(self.sim.params.edges)
+        else:
+            self.create_map(self.map_creator(num_stations, dist_mean, dist_std))
         self.init_demand()
-        self.append_initial_demand(self.generate_initial_demand())
+        #self.append_initial_demand(self.generate_initial_demand())
 
     def create_distance_matrix(self):
         for station in self.stations.values():
@@ -46,6 +50,14 @@ class Graph:
                 return True
         return False
 
+    def map_creator(self, num_stations, distance_mean, distance_std):
+        map = []
+        for i in range(num_stations):
+            frm = i + 1
+            to = i + 2 if i < num_stations - 1 else 1
+            dist = int(math.sqrt(random.gauss(distance_mean, distance_std)) ** 2)
+            map.append([frm, to, dist])
+        return map
 
 
 
@@ -71,21 +83,6 @@ class Graph:
         for station in self.stations.values():
             station.init_demand(Passengers.Passengers(self, station, self.stationkeys))
 
-    def generate_initial_demand_random(self):
-        nprandom.seed(G.randomseed)
-        random.seed(G.randomseed)
-        self.poisson_arrivals_expected = []
-        for i in range(len(self.params.initial_demand)):
-            self.poisson_arrivals_expected.append(random.randint(1, self.params.max_arrival))
-        self.poisson_arrivals = []
-        for i in range(len(self.params.initial_demand)):
-            station = []
-            for i in range(len(G.initial_demand)):
-                for j in range(int(G.SIMTIME / 10)):
-                    station.append(nprandom.poisson(self.poisson_arrivals_expected[i]))
-            self.poisson_arrivals.append(station)
-        return self.poisson_arrivals_expected
-
     def generate_initial_demand(self):
         nprandom.seed(G.randomseed)
         random.seed(G.randomseed)
@@ -95,10 +92,10 @@ class Graph:
         self.poisson_arrivals = []
         for i in range(len(self.params.expected_arrivals)):
             station = []
-            for i in range(len(G.initial_demand)):
-                for j in range(int(G.SIMTIME / 10)):
+            for i in range(len(self.params.expected_arrivals)):
+                for j in range(int(G.SIMTIME / G.INTERARRIVALTIME)):
                     station.append(nprandom.poisson(self.poisson_arrivals_expected[i]))
-            self.poisson_arrivals.append(station)
+                self.poisson_arrivals.append(station)
         return self.poisson_arrivals_expected
 
     def append_initial_demand(self, num):

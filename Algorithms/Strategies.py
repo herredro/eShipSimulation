@@ -258,8 +258,7 @@ class Decision_Union_New:
             new_ffs = list(ffs.items())[0]
             to = list(to_route.items())[0]
             distance = self.map.get_distance(new_ffs[0], to[0])
-            discount = 1 + G.BETA_DISCOUNT_RECURSION * new_ffs[1] / G.CAPACITY
-            discount = 1
+            discount = 1 + G.BETA_DISCOUNT_RECURSION * 0.5 * (1-(new_ffs[1] / G.CAPACITY))
             ret_val = [distance * (discount), [new_ffs[0], to[0]]]
             return ret_val
         else:
@@ -279,34 +278,6 @@ class Decision_Union_New:
             ret_val = [merged_score, merged_path]
             return ret_val
 
-    def calc_route_d2(self, to_route, begin=None):
-        if len(to_route) == 2:
-            # calc best order between 2
-            to_element = list(to_route.items())[0]
-            distance = self.map.get_distance(begin, to_element[0])
-            discount = 1+G.BETA_DISCOUNT_RECURSION*to_element[1]/G.CAPACITY
-            ret_val = [distance*(discount), [begin, to_element[0]]]
-            return ret_val
-        else:
-
-            sub1s = []
-            sub2s = []
-            for station in to_route:
-
-                route = self.calc_route_d2({station:to_route[station]})
-                if begin != None:
-                    bg_element = list(begin.items())
-                    additional = self.calc_route_d2({station:to_route[station]})
-                less = to_route.copy()
-                del less[station]
-                sub2s.append(self.calc_route_d(station, less))
-            final_scores = [a[0] + b[0] for a, b in zip(sub1s, sub2s)]
-            ind = int(np.argmin(final_scores))
-            merged_score = sub1s[ind][0] + sub2s[ind][0]
-            merged_path = list(sub1s[ind][1])
-            merged_path.extend(sub2s[ind][1][1:])
-            ret_val = [merged_score, merged_path]
-            return ret_val
 
     def calc_route(self, begin, to_route):
         if len(to_route) == 1:
@@ -328,7 +299,6 @@ class Decision_Union_New:
             merged_path.extend(sub2s[ind][1][1:])
             ret_val = [merged_score, merged_path]
             return ret_val
-
 
 
 

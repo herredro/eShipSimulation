@@ -14,7 +14,7 @@ class Passenger:
         self.time_arrival = arrivaltime
         self.time_boarded = None
         self.time_dispatched = None
-        self.max_wait_time = 50
+        self.max_wait_time = 5000
 
         self.dep = dep
         self.dest = dest
@@ -55,15 +55,22 @@ class Passengers:
         # Todo List of all Stations (int)
         self.passengers = []
         self.stationkeys = stationkeys
-        self.arrival_expect = random.randint(1, G.MAX_ARRIVAL_EXPECT)
+        self.arrival_expect_all = None
+        self.arrival_expect = random.randint(1, G.exp_arr)
         #self.map.env.process(self.update_poisson())
 
     def new(self, arrivaltime=None, dest=None):
+        sum = np.sum(self.arrival_expect_all)
+        elements = [i+1 for i in range(self.map.params.num_stations)]
+        weights = [self.arrival_expect_all[i] / sum for i in range(len(elements))]
+        dest = np.random.choice(elements, p=weights)
+
         if arrivaltime == None:
             arrivaltime = self.map.env.now
         while dest == None or dest == self.station:
             rand_station = random.randint(0, len(self.stationkeys) - 1)
             dest = self.stationkeys[rand_station]
+            dest = np.random.choice(elements, p=weights)
         new_passenger = Passenger(arrivaltime, self.station, dest)
         self.passengers.append(new_passenger)
 
@@ -106,13 +113,13 @@ class Passengers:
     def passenger_boarded(self, to_be_deleted):
         self.passengers.remove(to_be_deleted)
 
-
-    def update_poisson(self):
+    def update_poisson_regular(self):
         turn = 1
         while True:
             timestamp = self.map.sim.env.now
             old = len(self.passengers)
-            pois = self.map.poisson_arrivals[self.station-1][turn]
+            # pois = self.map.poisson_arrivals[self.station-1][turn]
+            pois = np.random.poisson(G.expected_arrivals[self.station])
             if self.map.sim.env.now > G.SIMTIME: pois = 0
             self.map.sim.stats.poisson_value_station[self.map.get_station(self.station)][self.map.env.now] = pois
             self.map.sim.stats.poisson_value[self.map.env.now] = pois
@@ -125,8 +132,60 @@ class Passengers:
             for i in range(timepassed):
                 self.map.sim.stats.waiting_demand.append(len(self.passengers))
                 self.map.sim.stats.waiting_demand_in_time[self.map.sim.env.now] = (len(self.passengers))
-            # print("UPDATED DEMAND %s %i-->%i" %(str(self.station), old, new))
             turn += 1
+
+            try:
+                self.map.sim.stats.total_demand_in_time[self.map.sim.env.now] += self.map.get_station(
+                    self.station).get_demand()
+
+            except KeyError:
+                self.map.sim.stats.total_demand_in_time[self.map.sim.env.now] = self.map.get_station(
+                    self.station).get_demand()
+            try:
+                self.map.sim.stats.demand_in_time[self.map.get_station(self.station)][
+                    self.map.sim.env.now] += self.map.get_station(self.station).get_demand()
+            except KeyError:
+                self.map.sim.stats.demand_in_time[self.map.get_station(self.station)][
+                    self.map.sim.env.now] = self.map.get_station(self.station).get_demand()
+
+    def update_poisson(self):
+        np.random.seed(G.randomseed)
+        turn = 1
+        while True:
+            timestamp = self.map.sim.env.now
+            old = len(self.passengers)
+            #pois = self.map.poisson_arrivals[self.station-1][turn]
+            #pois = np.random.poisson(G.expected_arrivals[self.station])
+            expected_arrival = 0
+            now, total_time = self.map.sim.env.now,  self.map.params.SIMTIME
+            if self.map.params.nohomo == 0:
+                expected_arrival = G.expected_arrivals[self.station-1]
+                self.arrival_expect_all = G.expected_arrivals
+            else:
+                if now < 120:
+                    expected_arrival = G.expected_arrivals1[self.station-1]
+                    self.arrival_expect_all = G.expected_arrivals1
+                elif now > 600:
+                    expected_arrival = G.expected_arrivals3[self.station-1]
+                    self.arrival_expect_all = G.expected_arrivals3
+                else:
+                    expected_arrival = G.expected_arrivals2[self.station-1]
+                    self.arrival_expect_all = G.expected_arrivals2
+            pois = np.random.poisson(expected_arrival)
+
+            self.map.sim.stats.poisson_value_station[self.map.get_station(self.station)][self.map.env.now] = pois
+            self.map.sim.stats.poisson_value[self.map.env.now] = pois
+            for i in range(pois):
+                self.new()
+                self.map.sim.stats.accured_demand += 1
+            new = len(self.passengers)
+            yield self.map.env.timeout(G.INTERARRIVALTIME)
+            timepassed = self.map.sim.env.now - timestamp
+            for i in range(timepassed):
+                self.map.sim.stats.waiting_demand.append(len(self.passengers))
+                self.map.sim.stats.waiting_demand_in_time[self.map.sim.env.now] = (len(self.passengers))
+            turn += 1
+
             try:
                 self.map.sim.stats.total_demand_in_time[self.map.sim.env.now] += self.map.get_station(self.station).get_demand()
 

@@ -27,7 +27,8 @@ class Stats:
         self.drovefromto = []           # [from.id][to.id] += 1
         self.visited_stations = {}      # [boat][station] += 1 **Network**
         # PASSENGERS                            # ##BOAT##
-        self.dropped_passengers = []            # list: all dispatched passengers
+        self.picked_passengers = []            # list: all picked passengers
+        self.dropped_passengers = []
         self.left_passengers = []               # list: all dispatched passengers
         self.override_in_time= {}               # list: drive_time - distance
         self.passenger_waiting_time = []        # list: time(pu) - time(pas.arrival)
@@ -79,7 +80,7 @@ class Stats:
             print("%s%s: %s," % ("\t"*a, item, self.means[item]))
             a+=1
         # FINAL DEMAND
-        print("occured_demand=%s \t demand_left=%s \t SATISFIED=%s%%" %(self.accured_demand, sum(self.final_demand), self.satisfied))
+        print("occured_demand=%s \t demand_left=%s \t picked=%s \t dropped=%s%%" %(self.accured_demand, sum(self.final_demand), len(self.picked_passengers), self.satisfied))
         print()
 
     def micro__analyze_data(self):
@@ -139,13 +140,42 @@ class Stats:
             'beta':self.params.beta,
             'num_boats':self.params.num_boats,
             'capacity':self.params.capacity,
+            #'dem_dist': self.sim.dem_distr,
             'mn_boatload_ratio':self.means["boatload_ratio"],
             'num_stations': self.num_stations,
             'avgdist': round(st.mean(self.params.dists), 2),
             'stddist': round(st.stdev(self.params.dists), 2),
             'avgexpdem': round(st.mean(G.expected_arrivals[0:self.num_stations]), 2),
             'stdexpdem': round(st.stdev(G.expected_arrivals[0:self.num_stations]), 2),
-            'dispatched':len(self.dropped_passengers),
+            'dispatched':len(self.picked_passengers),
+            'dropped': len(self.left_passengers),
+            'waiting': sum(self.final_demand),
+            'dem_occ':self.accured_demand,
+            'dem_left':sum(self.final_demand),
+            'mn_waiting_demand':self.means["waiting_demand_station"],
+            'p_wts':self.means["P_wts"],
+            'p_otb':self.means["P_otb"],
+            'satisfied':self.satisfied
+        }
+        return out
+
+    def csv_output_small(self):
+        out = {
+            'simtime':self.params.SIMTIME,
+            'rand':self.params.randomseed,
+            'meth': self.mode,
+            'alpha':self.params.alpha,
+            'beta':self.params.beta,
+            'num_boats':self.params.num_boats,
+            'capacity':self.params.capacity,
+            'dem_dist': self.sim.dem_distr,
+            'mn_boatload_ratio':self.means["boatload_ratio"],
+            'num_stations': self.num_stations,
+            'avgdist': round(st.mean(self.params.dists), 2),
+            'stddist': round(st.stdev(self.params.dists), 2),
+            'avgexpdem': round(st.mean(G.expected_arrivals[0:self.num_stations]), 2),
+            'stdexpdem': round(st.stdev(G.expected_arrivals[0:self.num_stations]), 2),
+            'dispatched':len(self.picked_passengers),
             'dropped': len(self.left_passengers),
             'waiting': sum(self.final_demand),
             'dem_occ':self.accured_demand,
@@ -166,11 +196,13 @@ class Stats:
         capacity = sorted(list(set(capacity)))
         num_boats = sorted(list(set(num_boats)))
 
-        arr = [[0 for i in range(len(num_boats))] for j in range(len(capacity))]
-        for stat in stats:
-            arr[capacity.index(stat.params.capacity)][num_boats.index(stat.params.num_boats)] = stat.satisfied
+        #arr = [[0 for i in range(len(num_boats))] for j in range(len(capacity))]
+        # for stat in stats:
+        #     arr[capacity.index(stat.params.capacity)][num_boats.index(stat.params.num_boats)] = stat.satisfied
 
-        a=1
+        arr = []
+        for stat in stats:
+            arr.append(stat.means["P_wts"])
 
         fig, ax = plt.subplots()
         im = ax.imshow(arr)
@@ -181,7 +213,8 @@ class Stats:
         # ... and label them with the respective list entries
         ax.set_xticklabels(num_boats)
         ax.set_yticklabels(capacity)
-
+        plt.ylabel("capacity")
+        plt.xlabel("# boats")
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                  rotation_mode="anchor")
@@ -193,6 +226,47 @@ class Stats:
                 pass
 
         ax.set_title("Parameters #boats & capacity")
+        fig.tight_layout()
+        plt.show()
+
+    def macro__plot_ab(self, stats):
+        alpha = []
+        beta = []
+        for stat in stats:
+            alpha.append(stat.params.alpha)
+            beta.append(stat.params.beta)
+        beta = sorted(list(set(beta)))
+        alpha = sorted(list(set(alpha)))
+
+        arr = [[0 for i in range(len(alpha))] for j in range(len(beta))]
+        for stat in stats:
+            #arr[alpha.index(stat.params.alpha)][beta.index(stat.params.beta)] = stat.means["P_wts"]
+            arr[alpha.index(stat.params.alpha)][beta.index(stat.params.beta)] = stat.means["P_otb"]
+
+        a = 1
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(arr)
+
+        # We want to show all ticks...
+        ax.set_xticks(np.arange(len(alpha)))
+        ax.set_yticks(np.arange(len(beta)))
+        # ... and label them with the respective list entries
+        ax.set_xticklabels(alpha)
+        ax.set_yticklabels(beta)
+        plt.ylabel("alpha")
+        plt.xlabel("beta")
+        # Rotate the tick labels and set their alignment.
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                 rotation_mode="anchor")
+
+        # Loop over data dimensions and create text annotations.
+        for i in range(len(alpha)):
+            for j in range(len(beta)):
+                text = ax.text(i, j, arr[j][i], ha="center", va="center", color="w")
+                pass
+
+        ax.set_title("Effects alpha/beta on mean p_otb n=%scap=%s"%(stat.params.num_boats, stat.params.capacity))
         fig.tight_layout()
         plt.show()
 
@@ -246,7 +320,7 @@ class Stats:
 
             print(run.mode)
             if G.means: print(tabulate(tabs, headers=['Variable', 'Median', 'Mean', 'Population Variance'], tablefmt="fancy_grid"))
-            if G.accrued_demand: print("Accured demand summed: %i" %run.accured_demand)
+            if G.accrued_demand: print("Accured demand summed: %i, picked: %s, satisfied: %s" %(run.accured_demand, len(run.picked_passengers), run.satisfied))
 
             # Stations approached per boat
             for i in range(len(run.boat_at_station)):
@@ -294,7 +368,7 @@ class Stats:
 
         # Demand Stations
         f3 = plt.figure(3)
-        colors = ["blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black"]
+        colors = ["blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black", "blue", "red", "green", "blue", "black"]
         plt.title('boat load over time with %i boats, IAT:%i, MAE:%i' % (
             len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
         col = 0
@@ -308,7 +382,7 @@ class Stats:
 
             for boat in boats:
                 plt.plot(boat.keys(), boat.values(), label=run.mode + ": B" + str(num), linestyle=line,
-                         color=colors[num])
+                         color="red")
                 num += 1
             col += 1
         plt.legend()
@@ -369,8 +443,8 @@ class Stats:
                 col = "red"
             else:
                 col = "blue"
-            plt.title('Total demand over time with %i boats, IAT:%i, MAE:%i' % (
-                len(self.sim.cb.boats), G.INTERARRIVALTIME, G.MAX_ARRIVAL_EXPECT))
+            plt.title("Total demand over time in Map %s \nwith %i boats of capacity %s, varying_demand=%s" % (
+                self.params.num_stations, self.params.num_boats, self.params.capacity, self.params.nohomo))
             plt.plot(run.total_demand_in_time.keys(), run.total_demand_in_time.values(), label=run.mode, color=col)
             num += 1
         plt.legend()

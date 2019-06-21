@@ -162,6 +162,8 @@ class Boat:
             new_pas = (self.location.passengers.get_FIFO(space_left))
             for passenger in new_pas:
                 self.passengers.append(passenger)
+                self.sim.stats.picked_passengers.append(passenger)
+
                 passenger.time_boarded = self.sim.env.now
                 self.sim.stats.passenger_waiting_time.append(self.sim.env.now - passenger.time_arrival)
                 self.sim.stats.p_wait_till_pickup[self.sim.env.now] = self.sim.env.now - passenger.time_arrival
@@ -185,6 +187,7 @@ class Boat:
         for passenger in list:
             if len(self.passengers) < self.capacity:
                 self.passengers.append(passenger)
+                self.sim.stats.picked_passengers.append(passenger)
                 passenger.time_boarded = self.sim.env.now
                 if passenger.score != {}: passenger.promised_delay = passenger.score[self]
                 self.location.passengers.passengers.remove(passenger)
