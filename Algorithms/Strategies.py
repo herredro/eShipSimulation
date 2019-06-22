@@ -92,6 +92,7 @@ class Decision_Union_New:
     def drive(self, boat):
         # calc route
         if len(boat.passengers) > 0:
+
             self.empty_route[0] += 1
             boarded_dest = boat.boarded_destinations_dict()
             route = self.calc_route_d({boat.location: len(boat.passengers)}, boarded_dest)

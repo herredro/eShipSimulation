@@ -18,9 +18,9 @@ PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
 
 #MAP PARAMS
-num_stations=20
-dist_mean=10
-dist_std=5
+num_stations=5
+dist_mean=25
+dist_std=10
 
 # RESOURCES
 NUM_BOATS = 90
@@ -30,7 +30,7 @@ startVertex = 1
 
 # PARAMETERS ALGOS
 BETA_DISCOUNT_RECURSION = 3 #best value after quick test
-ALPHA_DESTINATION_MIX = 5
+ALPHA_DESTINATION_MIX = 3
 
 # DEMAND
 MAX_ARRIVAL_EXPECT = 2
