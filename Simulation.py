@@ -59,34 +59,45 @@ class Simulation:
 
 
 
-        self.wt()
-        self.sat()
-        self.both()
+        wt = self.wt()
+        sat = self.sat()
+        com = self.both()
+
+        print(wt, sat, com)
 
 
 
         # self.until_wait_time(False, 100)
         #self.until_wait_time(True, 100)
     def wt(self):
-        self.until_wt(True, 20, 0)
-        self.until_wt(False, 20, 0)
+        unic = self.until_wt(True, 20, 0)
+        unih = self.until_wt(False, 20, 0)
         #
-        self.until_wt(True, 20, 1)
-        self.until_wt(False, 20, 1)
+        varc = self.until_wt(True, 20, 1)
+        varh = self.until_wt(False, 20, 1)
+
+        diff = [c - h for (c, h) in zip(unic, unih)]
+        return diff
 
     def sat(self):
-        self.until_satisfied(True, 90, 0)
-        self.until_satisfied(False, 90, 0)
+        unic = self.until_satisfied(True, 90, 0)
+        unih = self.until_satisfied(False, 90, 0)
         #
-        self.until_satisfied(True, 90, 1)
-        self.until_satisfied(False, 90, 1)
+        varc = self.until_satisfied(True, 90, 1)
+        varh = self.until_satisfied(False, 90, 1)
+
+        diff = [c - h for (c, h) in zip(unic, unih)]
+        return diff
 
     def both(self):
-        self.until_both(True, 20, 90, 0)
-        self.until_both(False, 20, 90, 0)
+        unic = self.until_both(True, 20, 90, 0)
+        unih = self.until_both(False, 20, 90, 0)
         #
-        self.until_both(True, 20, 90, 1)
-        self.until_both(False, 20, 90, 1)
+        varc = self.until_both(True, 20, 90, 1)
+        varh = self.until_both(False, 20, 90, 1)
+
+        diff = [c - h for (c, h) in zip(unic, unih)]
+        return diff
 
     def old_school(self):
         runs=[]
@@ -112,9 +123,9 @@ class Simulation:
             while more_needed:
                 run = (self.combined3(central, capacity=capacities[i], num_boats=nb, nohomo=nohomo))
                 # runs.append(run)
-                print("%s boats achieve wait_time: %s (%s%% satisfaction)" % (nb, run.means["P_wts"], run.satisfied))
-                achieved = run.means["P_wts"]
-                if run.means["P_wts"] > goalw or (run.satisfied < goals):
+                print("%s boats achieve wait_time: %s (%s%% satisfaction)" % (nb, run.medians["P_wts"], run.satisfied))
+                achieved = run.medians["P_wts"]
+                if run.medians["P_wts"] > goalw or (run.satisfied < goals):
                     nb += 1
                     if goalw/achieved < 0.3:
                         nb=nb*2
@@ -147,6 +158,7 @@ class Simulation:
         print(needed)
         print("This was for, %sstations, central=%s, vary=%s" % (self.run.params.num_stations, central, nohomo))
         print()
+        return needed
 
     def until_wt(self, central, goal, nohomo):
         if nohomo == 1:
@@ -163,9 +175,9 @@ class Simulation:
             while more_needed:
                 run = (self.combined3(central, capacity=capacities[i], num_boats=nb, nohomo=nohomo))
                 # runs.append(run)
-                print("%sb's --> %s%%" % (nb, run.means["P_wts"]))
-                achieved = run.means["P_wts"]
-                if run.means["P_wts"] > goal:
+                print("%sb's --> %s%%" % (nb, run.medians["P_wts"]))
+                achieved = run.medians["P_wts"]
+                if run.medians["P_wts"] > goal:
                     nb += 1
                     if goal/achieved < 0.3:
                         nb=nb*2
@@ -186,6 +198,7 @@ class Simulation:
         print(needed)
         print("This was for, %sstations, central=%s, vary=%s" % (self.run.params.num_stations, central, nohomo))
         print()
+        return needed
 
     def until_satisfied(self, central, goal, nohomo):
         if nohomo == 1:
@@ -228,6 +241,7 @@ class Simulation:
         print(needed)
         print("This was for, %sstations, central=%s, vary=%s" % (self.run.params.num_stations, central, nohomo))
         print()
+        return needed
         # print("%s, goal=%s, no-homo=%s, map=%s" % (central, goal, run.params.non_homo_dem, run.params.num_stations))
         # print("For capacities %s, needed %s" %(capacities, needed))
 

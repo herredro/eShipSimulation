@@ -13,7 +13,7 @@ PENALTY_ROUTE_DIVERSION = 4 # needs to be bigger than 1, otherwise reverse effec
 
 #SIM PARAMS
 SIMTIME = 720 #12h operation
-DOCK_TIMEOUT = 0
+DOCK_TIMEOUT = 2
 PICK_UP_TIMEOUT = 0
 DROPOFF_TIMEOUT = 0
 
@@ -23,18 +23,18 @@ dist_mean=10
 dist_std=5
 
 # RESOURCES
-NUM_BOATS = 60
+NUM_BOATS = 90
 CAPACITY = 10
 locaction=-1
 startVertex = 1
 
 # PARAMETERS ALGOS
-BETA_DISCOUNT_RECURSION = 4 #best value after quick test
-ALPHA_DESTINATION_MIX = 4
+BETA_DISCOUNT_RECURSION = 3 #best value after quick test
+ALPHA_DESTINATION_MIX = 5
 
 # DEMAND
 MAX_ARRIVAL_EXPECT = 2
-INTERARRIVALTIME = 40
+INTERARRIVALTIME = 20
 #initial_demand = [450, 440, 420, 90, 110, 130, 150]
 initial_demand   = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 # expected_arrivals= [1,3,4,3,2,3,1,1,2,3,1,1,2,1,1,2]
