@@ -76,8 +76,9 @@ class Simulation:
         varc = self.until_wt(True, 20, 1)
         varh = self.until_wt(False, 20, 1)
 
-        diff = [c - h for (c, h) in zip(unic, unih)]
-        return diff
+        unidiff = [c - h for (c, h) in zip(unic, unih)]
+        vardiff = [c - h for (c, h) in zip(varc, varh)]
+        return [unidiff, vardiff]
 
     def sat(self):
         unic = self.until_satisfied(True, 90, 0)
@@ -86,8 +87,9 @@ class Simulation:
         varc = self.until_satisfied(True, 90, 1)
         varh = self.until_satisfied(False, 90, 1)
 
-        diff = [c - h for (c, h) in zip(unic, unih)]
-        return diff
+        unidiff = [c - h for (c, h) in zip(unic, unih)]
+        vardiff = [c - h for (c, h) in zip(varc, varh)]
+        return [unidiff, vardiff]
 
     def both(self):
         unic = self.until_both(True, 20, 90, 0)
@@ -96,8 +98,9 @@ class Simulation:
         varc = self.until_both(True, 20, 90, 1)
         varh = self.until_both(False, 20, 90, 1)
 
-        diff = [c - h for (c, h) in zip(unic, unih)]
-        return diff
+        unidiff = [c - h for (c, h) in zip(unic, unih)]
+        vardiff = [c - h for (c, h) in zip(varc, varh)]
+        return [unidiff, vardiff]
 
     def old_school(self):
         runs=[]
