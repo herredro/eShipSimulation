@@ -1,7 +1,7 @@
-import Network as Net
-import Boat as Boat
-from Algorithms import Strategies as Strategies
-import Global as G
+from src import Network as Net
+from src import Boat
+from src.Algorithms import Strategies
+from src import Global as G
 
 from tabulate import tabulate
 from colorama import Fore, Back, Style

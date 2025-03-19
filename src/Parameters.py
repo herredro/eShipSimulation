@@ -1,4 +1,4 @@
-import Global as G
+from src import Global as G
 
 class Parameters:
 

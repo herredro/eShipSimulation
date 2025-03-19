@@ -1,5 +1,5 @@
-import Global as G
-import Algorithms.Strategies as Strat
+from src import Global as G
+from src.Algorithms import Strategies as Strat
 from colorama import Fore, Back, Style
 from numpy.random import choice
 import logging

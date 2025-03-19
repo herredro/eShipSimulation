@@ -1,0 +1,3 @@
+"""
+eShip Simulation package
+""" 

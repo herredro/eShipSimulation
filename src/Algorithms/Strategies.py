@@ -1,7 +1,7 @@
-import Network
-import Algorithms.Dijkstra
-import Stats
-import Global as G
+from src import Network
+from src.Algorithms import Dijkstra
+from src import Stats
+from src import Global as G
 import time
 import operator
 import random
@@ -54,7 +54,7 @@ class Decision_Union_New:
         self.sim = sim
         self.map = sim.map
         self.boats = self.sim.cb.boats
-        self.dijk = Algorithms.Dijkstra.Dijk(self.map)
+        self.dijk = Dijkstra.Dijk(self.map)
         # Stations
         self.all_stations = self.map.get_all_stations()
 
@@ -316,7 +316,7 @@ class Decision_Union:
         self.sim = sim
         self.map = sim.map
         self.boats = self.sim.cb.boats
-        self.dijk = Algorithms.Dijkstra.Dijk(self.map)
+        self.dijk = Dijkstra.Dijk(self.map)
         self.stats = Stats.Stats_Boat(self.boats)
         # Stations
         self.all_stations = []
@@ -635,7 +635,7 @@ class Decision_Anarchy:
         self.map = sim.map
         self.boat = boat
         self.move_strategy = Strategies(self.map)
-        self.dijk = Algorithms.Dijkstra.Dijk(self.map)
+        self.dijk = Dijkstra.Dijk(self.map)
 
         self.all_stations = []
         self.pass_dest_at_location = []

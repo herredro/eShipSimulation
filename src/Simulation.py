@@ -1,11 +1,11 @@
 import simpy
-import Controller as Controller
-import Network as Map
-import Stats
-import Global as G
-from Parameters import Parameters
-from Passengers import Passenger
-import Algorithms.Strategies as Strategies
+from src import Controller
+from src import Network as Map
+from src import Stats
+from src import Global as G
+from src.Parameters import Parameters
+from src.Passengers import Passenger
+from src.Algorithms import Strategies
 from colorama import Fore, Back, Style
 import random
 import csv

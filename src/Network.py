@@ -1,6 +1,6 @@
-import Global as G
-import Algorithms.Dijkstra
-import Passengers
+from src import Global as G
+from src.Algorithms import Dijkstra
+from src import Passengers
 from colorama import Fore, Back, Style
 from tabulate import tabulate
 import logging
@@ -26,7 +26,7 @@ class Graph:
         self.chargers = {}
         self.num_stations = 0
         self.num_chargers = 0
-        self.dijk = Algorithms.Dijkstra.Dijk(self)
+        self.dijk = Dijkstra.Dijk(self)
 
         if num_stations == 0:
             self.create_map(self.sim.params.edges)
